@@ -5,10 +5,11 @@ from servertime import main as rscheck
 from gachacalc import msgsend as hhcalc
 import random
 import asyncio
-import json
-import aiofiles
 
-token = "NzIxMDIyMTUxNDkwMDExMTU2.Xunm3A.mL0dVNw6nP89FI95HqrQYedrmIQ"
+f = open("token.txt")
+token = f.read()
+f.close()
+
 maintain = False
 if maintain:
     prefix = "et!"
