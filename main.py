@@ -3,18 +3,26 @@ from discord.ext import commands, tasks
 from opscrape import main as opgrab
 from servertime import main as rscheck
 from gachacalc import msgsend as hhcalc
+from skinscrape import main as getskins
 import random
 import asyncio
 
 f = open("token.txt")
-token = f.read()
+token = f.readline()
 f.close()
 
-maintain = False
-if maintain:
-    prefix = "et!"
-else:
+f = open("bottype.txt")
+bottype = f.read()
+f.close()
+
+if bottype.strip("\n") == "release":
+    print("Running Release Code....")
+    iconlink = "https://img.ezz.moe/0622/17-19-26.png"
     prefix = "e!"
+elif bottype.strip("\n") == "testing":
+    print("Running Development Code....")
+    iconlink = "https://img.ezz.moe/0622/16-15-14.jpg"
+    prefix = "t!"
 bot = commands.Bot(command_prefix=prefix)
 bot.remove_command('help')
 
@@ -22,12 +30,12 @@ bot.remove_command('help')
 @bot.event
 async def on_ready():
     print(f'Exusiai is Online! Client name: {bot.user}')
-    if not maintain:
+    if bottype == "release":
         await bot.change_presence(activity=discord.Game(name=prefix + "help | Exusiai"))
         channel = bot.get_channel(721292304739991552)
         ResetTime(channel=channel)
     else:
-        await bot.change_presence(activity=discord.Game(name="Bot in Maintenance"))
+        await bot.change_presence(activity=discord.Game(name=prefix + "help | Exusiai (Dev)"))
 
 
 class ResetTime(commands.Cog):
@@ -58,29 +66,29 @@ async def help(ctx):
     page = 1
 
     def check(reaction, user):
-        return user == umsg.author and (str(reaction.emoji) == "⬅️" or "➡️" or "🗑️")
+        return user == umsg.author and (str(reaction.emoji) == "⬅" or "➡" or "🗑️")
 
     while True:
         embed = discord.Embed(title="Exusiai Commands")
-        embed.set_thumbnail(url="https://img.ezz.moe/0617/17-58-49.png")
+        embed.set_thumbnail(url=iconlink)
         embed.description = "Locked and loaded, ready for action!\nWhat's the objective today, Leader?\n\n" \
                             "My prefix is " + prefix + "\nSymbols:\n" \
                                                        "[] = Optional (Can be left as empty)\n" \
                                                        "<> = Mandatory (Has to be filled in or else it won't work)"
         if page == 1:
-            embed.add_field(name="Actions", value="⬅️ for previous page\n\n"
-                                                  "➡️ for next page\n\n"
+            embed.add_field(name="Actions", value="⬅ for previous page\n\n"
+                                                  "➡ for next page\n\n"
                                                   "🗑️ to delete the help message")
             hmsg = await ctx.send(embed=embed)
 
-            await hmsg.add_reaction("➡️")
+            await hmsg.add_reaction("➡")
             await hmsg.add_reaction("🗑️")
 
             try:
                 reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
             except asyncio.TimeoutError:
-                await hmsg.remove_reaction("⬅️", hmsg.author)
-                await hmsg.remove_reaction("➡️", hmsg.author)
+                await hmsg.remove_reaction("➡", hmsg.author)
+                await hmsg.remove_reaction("🗑️", hmsg.author)
                 return
             else:
                 if str(reaction.emoji) == "🗑️":
@@ -103,21 +111,22 @@ async def help(ctx):
                             inline=False)
             hmsg = await ctx.send(embed=embed)
 
-            await hmsg.add_reaction("⬅️")
-            await hmsg.add_reaction("➡️")
+            await hmsg.add_reaction("⬅")
+            await hmsg.add_reaction("➡")
             await hmsg.add_reaction("🗑️")
 
             try:
                 reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
             except asyncio.TimeoutError:
-                await hmsg.remove_reaction("⬅️", hmsg.author)
-                await hmsg.remove_reaction("➡️", hmsg.author)
+                await hmsg.remove_reaction("⬅", hmsg.author)
+                await hmsg.remove_reaction("➡", hmsg.author)
+                await hmsg.remove_reaction("🗑️", hmsg.author)
                 return
             else:
-                if str(reaction.emoji) == "⬅️":
+                if str(reaction.emoji) == "⬅":
                     await hmsg.delete()
                     page -= 1
-                elif str(reaction.emoji) == "➡️":
+                elif str(reaction.emoji) == "➡":
                     await hmsg.delete()
                     page += 1
                 elif str(reaction.emoji) == "🗑️":
@@ -134,21 +143,22 @@ async def help(ctx):
                                   "Gives a random husbando from Arknights!")
             hmsg = await ctx.send(embed=embed)
 
-            await hmsg.add_reaction("⬅️")
-            await hmsg.add_reaction("➡️")
+            await hmsg.add_reaction("⬅")
+            await hmsg.add_reaction("➡")
             await hmsg.add_reaction("🗑️")
 
             try:
                 reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
             except asyncio.TimeoutError:
-                await hmsg.remove_reaction("⬅️", hmsg.author)
-                await hmsg.remove_reaction("➡️", hmsg.author)
+                await hmsg.remove_reaction("⬅", hmsg.author)
+                await hmsg.remove_reaction("➡", hmsg.author)
+                await hmsg.remove_reaction("🗑️", hmsg.author)
                 return
             else:
-                if str(reaction.emoji) == "⬅️":
+                if str(reaction.emoji) == "⬅":
                     await hmsg.delete()
                     page -= 1
-                elif str(reaction.emoji) == "➡️":
+                elif str(reaction.emoji) == "➡":
                     await hmsg.delete()
                     page += 1
                 if str(reaction.emoji) == "🗑️":
@@ -170,14 +180,14 @@ async def help(ctx):
                             inline=False)
             hmsg = await ctx.send(embed=embed)
 
-            await hmsg.add_reaction("⬅️")
+            await hmsg.add_reaction("⬅")
             await hmsg.add_reaction("🗑️")
 
             try:
                 reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
             except asyncio.TimeoutError:
-                await hmsg.remove_reaction("⬅️", hmsg.author)
-                await hmsg.remove_reaction("➡️", hmsg.author)
+                await hmsg.remove_reaction("⬅", hmsg.author)
+                await hmsg.remove_reaction("🗑️", hmsg.author)
                 return
             else:
                 if str(reaction.emoji) == "🗑️":
@@ -221,7 +231,7 @@ async def certhh(ctx):
                         "The \"steps\" reset monthly\n\n" \
                         "**How do I get more Advanced Certificates?**\n" \
                         "Store => Certificate => Rules button at bottom"
-    embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
     await ctx.send(embed=embed)
 
 
@@ -259,7 +269,7 @@ async def op(ctx, *, arg):
     opname, opimg, opinfo, opstat = await opgrab(arg)
     embed = discord.Embed(title=opname)
     embed.set_image(url=opimg)
-    embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
     embed.add_field(name="Operator Description", value=opinfo[1].getText(), inline=False)
     embed.add_field(name="Operator Quote", value=opinfo[2].getText(), inline=False)
     embed.add_field(name="Operator Traits", value=opinfo[0].getText(), inline=False)
@@ -267,26 +277,33 @@ async def op(ctx, *, arg):
     embed.add_field(name="ATK", value=opstat[1].getText())
     embed.add_field(name="DEF", value=opstat[2].getText())
     embed.add_field(name="Actions", value="🌎 to get the link to operator's info\n"
+                                          "👕 to get the operator's skins\n"
                                           "🗑️ to remove this message", inline=False)
     result = await ctx.send(embed=embed)
 
     await result.add_reaction("🌎")
+    await result.add_reaction("👕")
     await result.add_reaction("🗑️")
 
     def check(reaction, user):
-        return user == umsg.author and (str(reaction.emoji) == "🌎" or "🗑️")
+        return user == umsg.author and (str(reaction.emoji) == "🌎" or "👕" or "🗑️")
 
     while True:
         try:
             reaction, user = await bot.wait_for('reaction_add', timeout=30.0, check=check)
         except asyncio.TimeoutError:
             await result.remove_reaction("🌎", result.author)
+            await result.remove_reaction("👕", result.author)
             await result.remove_reaction("🗑️", result.author)
             return
         else:
             if str(reaction.emoji) == "🌎":
                 await umsg.author.send("This is the link for: " + opname + ".\n" + opstat[3])
                 await result.remove_reaction("🌎", umsg.author)
+            elif str(reaction.emoji) == "👕":
+                await result.delete()
+                await skins(ctx, arg=opname)
+                return
             elif str(reaction.emoji) == "🗑️":
                 await umsg.delete()
                 await result.delete()
@@ -299,7 +316,7 @@ async def op_error(ctx, error):
     opname, opimg, opinfo, opstat = await opgrab()
     embed = discord.Embed(title=opname)
     embed.set_image(url=opimg)
-    embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
     embed.add_field(name="Operator Description", value=opinfo[1].getText(), inline=False)
     embed.add_field(name="Operator Quote", value=opinfo[2].getText(), inline=False)
     embed.add_field(name="Operator Traits", value=opinfo[0].getText(), inline=False)
@@ -307,22 +324,26 @@ async def op_error(ctx, error):
     embed.add_field(name="ATK", value=opstat[1].getText())
     embed.add_field(name="DEF", value=opstat[2].getText())
     embed.add_field(name="Actions", value="🌎 to get the link to operator's info\n"
+                                          "👕 to get the operator's skins\n"
+                                          "🎲 to re-roll for another operator\n"
                                           "🗑️ to remove this message", inline=False)
     print(opimg)
     result = await ctx.send(embed=embed)
 
     await result.add_reaction("🌎")
+    await result.add_reaction("👕")
     await result.add_reaction("🎲")
     await result.add_reaction("🗑️")
 
     def check(reaction, user):
-        return user == umsg.author and (str(reaction.emoji) == "🌎" or "🎲" or "🗑️")
+        return user == umsg.author and (str(reaction.emoji) == "🌎" or "👕" or "🎲" or "🗑️")
 
     while True:
         try:
             reaction, user = await bot.wait_for('reaction_add', timeout=30.0, check=check)
         except asyncio.TimeoutError:
             await result.remove_reaction("🌎", result.author)
+            await result.remove_reaction("👕", result.author)
             await result.remove_reaction("🎲", result.author)
             await result.remove_reaction("🗑️", result.author)
             return
@@ -330,30 +351,74 @@ async def op_error(ctx, error):
             if str(reaction.emoji) == "🌎":
                 await umsg.author.send("This is the link for: " + opname + ".\n" + opstat[3])
                 await result.remove_reaction("🌎", umsg.author)
-            elif str(reaction.emoji) == "🎲":
-                await result.remove_reaction("🎲", umsg.author)
-                opname, opimg, opinfo, opstat = await opgrab()
-                embed = discord.Embed(title=opname)
-                embed.set_image(url=opimg)
-                embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
-                embed.add_field(name="Operator Description", value=opinfo[1].getText(), inline=False)
-                embed.add_field(name="Operator Quote", value=opinfo[2].getText(), inline=False)
-                embed.add_field(name="Operator Traits", value=opinfo[0].getText(), inline=False)
-                embed.add_field(name="HP", value=opstat[0].getText())
-                embed.add_field(name="ATK", value=opstat[1].getText())
-                embed.add_field(name="DEF", value=opstat[2].getText())
-                embed.add_field(name="Actions", value="🌎 to get the link to operator's info\n"
-                                                      "🎲 to roll for another operator\n"
-                                                      "🗑️ to remove this message", inline=False)
+            elif str(reaction.emoji) == "👕":
                 await result.delete()
-                result = await ctx.send(embed=embed)
-
-                await result.add_reaction("🌎")
-                await result.add_reaction("🎲")
-                await result.add_reaction("🗑️")
+                await skins(ctx, arg=opname)
+                return
+            elif str(reaction.emoji) == "🎲":
+                await result.delete()
+                await op_error(ctx, error)
+                return
             elif str(reaction.emoji) == "🗑️":
                 await umsg.delete()
                 await result.delete()
+                return
+
+
+@bot.command()
+async def skins(ctx, *, arg):
+    umsg = ctx.message
+    opname, imglist = await getskins(arg)
+    skincount = len(imglist) - 1
+    scroll = 0
+
+    embed = discord.Embed(title="Operator Skins")
+    embed.set_author(name=opname)
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
+
+    def check(reaction, user):
+        return user == umsg.author and (str(reaction.emoji) == "⬅" or "➡" or "🗑️")
+
+    while True:
+        embed.set_image(url=imglist[scroll])
+        hmsg = await ctx.send(embed=embed)
+
+        if scroll == 0:
+            await hmsg.add_reaction("➡")
+            await hmsg.add_reaction("🗑️")
+        elif scroll == skincount:
+            await hmsg.add_reaction("⬅")
+            await hmsg.add_reaction("🗑️")
+        else:
+            await hmsg.add_reaction("⬅")
+            await hmsg.add_reaction("➡")
+            await hmsg.add_reaction("🗑️")
+
+        try:
+            reaction, user = await bot.wait_for('reaction_add', timeout=30.0, check=check)
+        except asyncio.TimeoutError:
+            if not (scroll == 0):
+                await hmsg.remove_reaction("⬅", hmsg.author)
+            if not (scroll == skincount):
+                await hmsg.remove_reaction("➡", hmsg.author)
+            await hmsg.remove_reaction("🗑️", hmsg.author)
+            return
+        else:
+            if str(reaction.emoji) == "⬅":
+                await hmsg.delete()
+                if not (scroll == 0):
+                    scroll -= 1
+                else:
+                    scroll += 1
+            elif str(reaction.emoji) == "➡":
+                await hmsg.delete()
+                if not (scroll == skincount):
+                    scroll += 1
+                else:
+                    scroll -= 1
+            elif str(reaction.emoji) == "🗑️":
+                await hmsg.delete()
+                await umsg.delete()
                 return
 
 
@@ -373,7 +438,7 @@ async def waifu(ctx):
     embed = discord.Embed(title="Waifu Headhunt")
     embed.description = "You got: **" + opname + "**!"
     embed.set_image(url=opimg)
-    embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
     await ctx.send(embed=embed)
 
 
@@ -385,7 +450,7 @@ async def husbando(ctx):
     embed = discord.Embed(title="Husbando Headhunt")
     embed.description = "You got: **" + opname + "**!"
     embed.set_image(url=opimg)
-    embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
     await ctx.send(embed=embed)
 
 
@@ -396,7 +461,7 @@ async def gacha(ctx):
     embed = discord.Embed(title="Headhunt Simulator")
     embed.description = "You pulled for 10 operators and:"
     embed.add_field(name="Results", value=opmsg)
-    embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
     result = await ctx.send(embed=embed)
 
     def check(reaction, user):
@@ -423,13 +488,13 @@ async def kick(ctx, player: str, *, reason: str = None):
     except discord.NotFound:
         embed = discord.Embed(title="Command Error!", description="I couldn't get the user that you mentioned!",
                               color=discord.Colour.red())
-        embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+        embed.set_footer(text="Exusiai", icon_url=iconlink)
         await ctx.send(embed=embed)
         return
     except discord.HTTPException:
         embed = discord.Embed(title="Command Error!", description="An error occurred while getting the user's info!",
                               color=discord.Colour.red())
-        embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+        embed.set_footer(text="Exusiai", icon_url=iconlink)
         await ctx.send(embed=embed)
 
     try:
@@ -437,20 +502,20 @@ async def kick(ctx, player: str, *, reason: str = None):
     except discord.Forbidden:
         embed = discord.Embed(title="Command Error!", description="You do not have the permissions to kick anybody!",
                               color=discord.Colour.red())
-        embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+        embed.set_footer(text="Exusiai", icon_url=iconlink)
         await ctx.send(embed=embed)
         return
     except discord.HTTPException:
         embed = discord.Embed(title="Command Error!", description="An error occurred while kicking the player!",
                               color=discord.Colour.red())
-        embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+        embed.set_footer(text="Exusiai", icon_url=iconlink)
         await ctx.send(embed=embed)
         return
     embed = discord.Embed(title="User Kicked", description="The user has been kicked from this server!")
     embed.add_field(name="User", value=uinfo.mention)
     embed.add_field(name="Kicked by", value=ctx.author.mention)
     embed.add_field(name="Reason", value=reason, inline=False)
-    embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
     await ctx.send(embed=embed)
 
 
@@ -464,13 +529,13 @@ async def ban(ctx, player: str, *, reason: str = None):
     except discord.NotFound:
         embed = discord.Embed(title="Command Error!", description="I couldn't get the user that you mentioned!",
                               color=discord.Colour.red())
-        embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+        embed.set_footer(text="Exusiai", icon_url=iconlink)
         await ctx.send(embed=embed)
         return
     except discord.HTTPException:
         embed = discord.Embed(title="Command Error!", description="An error occurred while getting the user's info!",
                               color=discord.Colour.red())
-        embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+        embed.set_footer(text="Exusiai", icon_url=iconlink)
         await ctx.send(embed=embed)
 
     try:
@@ -478,20 +543,20 @@ async def ban(ctx, player: str, *, reason: str = None):
     except discord.Forbidden:
         embed = discord.Embed(title="Command Error!", description="You do not have the permissions to ban anybody!",
                               color=discord.Colour.red())
-        embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+        embed.set_footer(text="Exusiai", icon_url=iconlink)
         await ctx.send(embed=embed)
         return
     except discord.HTTPException:
         embed = discord.Embed(title="Command Error!", description="An error occurred while banning the player!",
                               color=discord.Colour.red())
-        embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+        embed.set_footer(text="Exusiai", icon_url=iconlink)
         await ctx.send(embed=embed)
         return
     embed = discord.Embed(title="User Banned", description="The user has been banned from this server!")
     embed.add_field(name="User", value=uinfo.mention)
     embed.add_field(name="Kicked by", value=ctx.author.mention)
     embed.add_field(name="Reason", value=reason, inline=False)
-    embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
     await ctx.send(embed=embed)
 
 
@@ -505,13 +570,13 @@ async def unban(ctx, player: str, *, reason: str = None):
     except discord.NotFound:
         embed = discord.Embed(title="Command Error!", description="I couldn't get the user that you mentioned!",
                               color=discord.Colour.red())
-        embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+        embed.set_footer(text="Exusiai", icon_url=iconlink)
         await ctx.send(embed=embed)
         return
     except discord.HTTPException:
         embed = discord.Embed(title="Command Error!", description="An error occurred while getting the user's info!",
                               color=discord.Colour.red())
-        embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+        embed.set_footer(text="Exusiai", icon_url=iconlink)
         await ctx.send(embed=embed)
 
     try:
@@ -519,20 +584,20 @@ async def unban(ctx, player: str, *, reason: str = None):
     except discord.Forbidden:
         embed = discord.Embed(title="Command Error!", description="You do not have the permissions to unban anybody!",
                               color=discord.Colour.red())
-        embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+        embed.set_footer(text="Exusiai", icon_url=iconlink)
         await ctx.send(embed=embed)
         return
     except discord.HTTPException:
         embed = discord.Embed(title="Command Error!", description="An error occurred while unbanning the player!",
                               color=discord.Colour.red())
-        embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+        embed.set_footer(text="Exusiai", icon_url=iconlink)
         await ctx.send(embed=embed)
         return
     embed = discord.Embed(title="User Unbanned", description="The user has been banned from this server!")
     embed.add_field(name="User", value=uinfo.mention)
     embed.add_field(name="Kicked by", value=ctx.author.mention)
     embed.add_field(name="Reason", value=reason, inline=False)
-    embed.set_footer(text="Exusiai", icon_url="https://img.ezz.moe/0617/17-58-49.png")
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
     await ctx.send(embed=embed)
 
 
