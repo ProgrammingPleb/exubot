@@ -23,14 +23,14 @@ elif bottype.strip("\n") == "testing":
     print("Running Development Code....")
     iconlink = "https://img.ezz.moe/0622/16-15-14.jpg"
     prefix = "t!"
-bot = commands.Bot(command_prefix=prefix)
+bot = commands.Bot(command_prefix=commands.when_mentioned_or(prefix))
 bot.remove_command('help')
 
 
 @bot.event
 async def on_ready():
     print(f'Exusiai is Online! Client name: {bot.user}')
-    if bottype == "release":
+    if bottype.strip("\n") == "release":
         await bot.change_presence(activity=discord.Game(name=prefix + "help | Exusiai"))
         channel = bot.get_channel(721292304739991552)
         ResetTime(channel=channel)

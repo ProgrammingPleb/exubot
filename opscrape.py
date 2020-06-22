@@ -31,7 +31,7 @@ async def main(opin=""):
         opname = [random.choice(oplist)]
 
     # Get the right form for the URL
-    opnurl = opname[0].lower().replace("'", "").replace(" ", "-")
+    opnurl = opname[0].lower().strip("'").strip(" ")
 
     async with aiohttp.ClientSession() as session:
         async with session.get("https://gamepress.gg/arknights/operator/" + opnurl) as r:
