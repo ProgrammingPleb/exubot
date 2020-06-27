@@ -268,7 +268,8 @@ async def op(ctx, *, arg):
     umsg = ctx.message
     opname, opimg, opinfo, opstat = await opgrab(arg)
     embed = discord.Embed(title=opname)
-    embed.set_image(url=opimg)
+    if not (opimg == "???"):
+        embed.set_image(url=opimg)
     embed.set_footer(text="Exusiai", icon_url=iconlink)
     embed.add_field(name="Operator Description", value=opinfo[1].getText(), inline=False)
     embed.add_field(name="Operator Quote", value=opinfo[2].getText(), inline=False)
@@ -347,8 +348,6 @@ async def op_error(ctx, error):
                                           "👕 to get the operator's skins\n"
                                           "🎲 to re-roll for another operator\n"
                                           "🗑️ to remove this message", inline=False)
-    print(opimg)
-    print(type(opimg))
     result = await ctx.send(embed=embed)
 
     await result.add_reaction("🌎")
