@@ -328,7 +328,9 @@ async def op_error(ctx, error):
                                           "👕 to get the operator's skins\n"
                                           "🎲 to re-roll for another operator\n"
                                           "🗑️ to remove this message", inline=False)
-    print(type(opinfo[1].getText()))
+    print(opinfo)
+    print(opstat)
+    print(type(opstat[0].getText()))
     result = await ctx.send(embed=embed)
 
     await result.add_reaction("🌎")
