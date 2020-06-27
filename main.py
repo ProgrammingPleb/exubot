@@ -279,6 +279,7 @@ async def op(ctx, *, arg):
     embed.add_field(name="Actions", value="🌎 to get the link to operator's info\n"
                                           "👕 to get the operator's skins\n"
                                           "🗑️ to remove this message", inline=False)
+    print(type(opinfo[1].getText()))
     result = await ctx.send(embed=embed)
 
     await result.add_reaction("🌎")
