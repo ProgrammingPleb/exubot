@@ -38,7 +38,10 @@ async def main(opin=""):
             soup = BeautifulSoup(await r.text(), "lxml")
             for br in soup.find_all("br"):
                 br.replace_with("\n")
-            opimg = soup.find("div", {"id": "image-tab-1"}).find("a").find("img")
+            try:
+                opimg = soup.find("div", {"id": "image-tab-1"}).find("a").find("img")
+            except AttributeError:
+                opimg = "???"
             opurl = "https://gamepress.gg" + opimg["src"].rstrip("\n")
             opinfo = soup.select(".description-box")
             ophp = soup.find("span", {"id": "stat-hp"})

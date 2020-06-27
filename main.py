@@ -268,17 +268,28 @@ async def op(ctx, *, arg):
     umsg = ctx.message
     opname, opimg, opinfo, opstat = await opgrab(arg)
     embed = discord.Embed(title=opname)
-    embed.set_image(url=opimg)
+    if not (opimg == "???"):
+        embed.set_image(url=opimg)
     embed.set_footer(text="Exusiai", icon_url=iconlink)
     embed.add_field(name="Operator Description", value=opinfo[1].getText(), inline=False)
     embed.add_field(name="Operator Quote", value=opinfo[2].getText(), inline=False)
     embed.add_field(name="Operator Traits", value=opinfo[0].getText(), inline=False)
-    embed.add_field(name="HP", value=opstat[0].getText())
-    embed.add_field(name="ATK", value=opstat[1].getText())
-    embed.add_field(name="DEF", value=opstat[2].getText())
+    if opstat[0].getText().strip(" ") == "":
+        embed.add_field(name="HP", value="???")
+    else:
+        embed.add_field(name="HP", value=opstat[0].getText())
+    if opstat[1].getText().strip(" ") == "":
+        embed.add_field(name="ATK", value="???")
+    else:
+        embed.add_field(name="ATK", value=opstat[1].getText())
+    if opstat[2].getText().strip(" ") == "":
+        embed.add_field(name="DEF", value="???")
+    else:
+        embed.add_field(name="DEF", value=opstat[2].getText())
     embed.add_field(name="Actions", value="🌎 to get the link to operator's info\n"
                                           "👕 to get the operator's skins\n"
                                           "🗑️ to remove this message", inline=False)
+    print(type(opinfo[1].getText()))
     result = await ctx.send(embed=embed)
 
     await result.add_reaction("🌎")
@@ -315,19 +326,28 @@ async def op_error(ctx, error):
     umsg = ctx.message
     opname, opimg, opinfo, opstat = await opgrab()
     embed = discord.Embed(title=opname)
-    embed.set_image(url=opimg)
+    if not (opimg == "???"):
+        embed.set_image(url=opimg)
     embed.set_footer(text="Exusiai", icon_url=iconlink)
     embed.add_field(name="Operator Description", value=opinfo[1].getText(), inline=False)
     embed.add_field(name="Operator Quote", value=opinfo[2].getText(), inline=False)
     embed.add_field(name="Operator Traits", value=opinfo[0].getText(), inline=False)
-    embed.add_field(name="HP", value=opstat[0].getText())
-    embed.add_field(name="ATK", value=opstat[1].getText())
-    embed.add_field(name="DEF", value=opstat[2].getText())
+    if opstat[0].getText().strip(" ") == "":
+        embed.add_field(name="HP", value="???")
+    else:
+        embed.add_field(name="HP", value=opstat[0].getText())
+    if opstat[1].getText().strip(" ") == "":
+        embed.add_field(name="ATK", value="???")
+    else:
+        embed.add_field(name="ATK", value=opstat[1].getText())
+    if opstat[2].getText().strip(" ") == "":
+        embed.add_field(name="DEF", value="???")
+    else:
+        embed.add_field(name="DEF", value=opstat[2].getText())
     embed.add_field(name="Actions", value="🌎 to get the link to operator's info\n"
                                           "👕 to get the operator's skins\n"
                                           "🎲 to re-roll for another operator\n"
                                           "🗑️ to remove this message", inline=False)
-    print(opimg)
     result = await ctx.send(embed=embed)
 
     await result.add_reaction("🌎")
