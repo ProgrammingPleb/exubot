@@ -4,6 +4,7 @@ from opscrape import main as opgrab
 from servertime import main as rscheck
 from gachacalc import msgsend as hhcalc
 from skinscrape import main as getskins
+from osuscrape import main as osugrab
 import random
 import asyncio
 
@@ -501,7 +502,7 @@ async def gacha(ctx):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def kick(ctx, player: str, *, reason: str = None):
-    uid = int(player.replace("<@!", "").replace(">", ""))
+    uid = int(player.strip("<").strip(">").strip("@").strip("!"))
 
     try:
         uinfo = await bot.fetch_user(uid)
@@ -542,7 +543,7 @@ async def kick(ctx, player: str, *, reason: str = None):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def ban(ctx, player: str, *, reason: str = None):
-    uid = int(player.replace("<@!", "").replace(">", ""))
+    uid = int(player.strip("<").strip(">").strip("@").strip("!"))
 
     try:
         uinfo = await bot.fetch_user(uid)
@@ -583,7 +584,7 @@ async def ban(ctx, player: str, *, reason: str = None):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def unban(ctx, player: str, *, reason: str = None):
-    uid = int(player.replace("<@!", "").replace(">", ""))
+    uid = int(player.strip("<").strip(">").strip("@").strip("!"))
 
     try:
         uinfo = await bot.fetch_user(uid)
@@ -619,6 +620,9 @@ async def unban(ctx, player: str, *, reason: str = None):
     embed.add_field(name="Reason", value=reason, inline=False)
     embed.set_footer(text="Exusiai", icon_url=iconlink)
     await ctx.send(embed=embed)
+    
+    
+# Osu Commands Start Here
 
 
 bot.run(token)
