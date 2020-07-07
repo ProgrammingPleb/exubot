@@ -15,7 +15,10 @@ async def main(username: str, type: str = "user", mode: str = "std", rank: int =
     if type == "user":
         async with aiohttp.ClientSession() as session:
             async with session.get("https://osu.ppy.sh/api/get_user?k=" + token.strip("\n") + "&u=" + username + "&type=string") as r:
-                return (await r.json()), T
+                if r.status == 200:
+                    return (await r.json())[0], True
+                else:
+                    return None, False
     elif type == "best":
         async with aiohttp.ClientSession() as session:
             async with session.get("https://osu.ppy.sh/api/get_user_best?k=" + token.strip("\n") + "&u=" + username + "&type=string") as r:
@@ -23,24 +26,24 @@ async def main(username: str, type: str = "user", mode: str = "std", rank: int =
         async with aiohttp.ClientSession() as session:
             async with session.get("https://osu.ppy.sh/api/get_beatmaps?k=" + token.strip("\n") + "&b=" + bestdata['beatmap_id']) as r:
                 bmapdata = (await r.json())[0]
-        return [bestdata, bmapdata]
+        if r.status == 200:
+            return [bestdata, bmapdata], True
+        else:
+            return None, True
     elif type == "recent":
         async with aiohttp.ClientSession() as session:
             async with session.get("https://osu.ppy.sh/api/get_user_recent?k=" + token.strip("\n") + "&u=" + username + "&type=string") as r:
-                return (await r.json())[0], True
-            
-            
+                if r.status == 200:
+                    return (await r.json())[0], True
+                else:
+                    return None, False
+
+
 async def test():
-    data = (await main(username="mhikaru117", type="best"))
+    data, status = (await main(username="EzzPlays", type="user"))
     print(data)
-    print(data[1]['title'])
-    print(data[0]['score'])
-    print(data[0]['maxcombo'])
-    print(data[0]['rank'])
-    
+    print(data[0]['username'])
 
 
 if __name__ == "__main__":
-    futures = [test()]
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(asyncio.wait(futures))
+    asyncio.run(test())

@@ -7,9 +7,10 @@ from skinscrape import main as getskins
 from osuscrape import main as osugrab
 import random
 import asyncio
+import json
 
 f = open("token.txt")
-token = f.readline()
+token = f.read()
 f.close()
 
 f = open("bottype.txt")
@@ -40,6 +41,7 @@ async def on_ready():
 
 
 class ResetTime(commands.Cog):
+    # pylint: disable=maybe-no-member
     def __init__(self, channel):
         self.timecheck.start(channel=channel)
 
@@ -167,6 +169,64 @@ async def help(ctx):
                     await umsg.delete()
                     return
         elif page == 4:
+            embed.add_field(name="osu! Commands",
+                            value="**olink <Username>**\n"
+                                  "Links your Discord username to your osu! username.\n\n"
+                                  "**oprofile [Username]**\n"
+                                  "Gives info about your player's (or another's) osu! stats")
+            hmsg = await ctx.send(embed=embed)
+
+            await hmsg.add_reaction("⬅")
+            await hmsg.add_reaction("➡")
+            await hmsg.add_reaction("🗑️")
+
+            try:
+                reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
+            except asyncio.TimeoutError:
+                await hmsg.remove_reaction("⬅", hmsg.author)
+                await hmsg.remove_reaction("➡", hmsg.author)
+                await hmsg.remove_reaction("🗑️", hmsg.author)
+                return
+            else:
+                if str(reaction.emoji) == "⬅":
+                    await hmsg.delete()
+                    page -= 1
+                elif str(reaction.emoji) == "➡":
+                    await hmsg.delete()
+                    page += 1
+                if str(reaction.emoji) == "🗑️":
+                    await hmsg.delete()
+                    await umsg.delete()
+                    return
+        elif page == 5:
+            embed.add_field(name="Misc. Commands",
+                            value="**rng [Initial Range] <Final Range>**\n"
+                                  "Gives a random number based on the range.")
+            hmsg = await ctx.send(embed=embed)
+
+            await hmsg.add_reaction("⬅")
+            await hmsg.add_reaction("➡")
+            await hmsg.add_reaction("🗑️")
+
+            try:
+                reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
+            except asyncio.TimeoutError:
+                await hmsg.remove_reaction("⬅", hmsg.author)
+                await hmsg.remove_reaction("➡", hmsg.author)
+                await hmsg.remove_reaction("🗑️", hmsg.author)
+                return
+            else:
+                if str(reaction.emoji) == "⬅":
+                    await hmsg.delete()
+                    page -= 1
+                elif str(reaction.emoji) == "➡":
+                    await hmsg.delete()
+                    page += 1
+                if str(reaction.emoji) == "🗑️":
+                    await hmsg.delete()
+                    await umsg.delete()
+                    return
+        elif page == 6:
             embed.add_field(name="Moderation (WIP)",
                             value="**mute <User> [Reason]**\n"
                                   "Mutes a user in the server\n\n"
@@ -620,9 +680,69 @@ async def unban(ctx, player: str, *, reason: str = None):
     embed.add_field(name="Reason", value=reason, inline=False)
     embed.set_footer(text="Exusiai", icon_url=iconlink)
     await ctx.send(embed=embed)
-    
-    
-# Osu Commands Start Here
 
+
+@bot.command()
+async def rng(ctx, fnum: int, lnum: int = None):
+    if lnum == None:
+        lnum = fnum
+        fnum = 0
+    value = random.randrange(fnum, lnum)
+    await ctx.send("You got: " + str(value))
+
+
+# Osu Commands Start Here
+async def playerdb(player: int, mode: str = "read", uname: str = None):
+    f = open("osuplayer.json")
+    filedata = f.read()
+    f.close()
+    print(filedata)
+    data = json.loads(filedata)
+
+    if mode == "read":
+        try:
+            username = data[str(player)]
+            done = True
+        except KeyError:
+            username = None
+            done = False
+        return username, done
+    elif mode == "write":
+        data[str(player)] = uname
+        fwrite = json.dumps(data)
+        f = open("osuplayer.json", "w")
+        f.write(fwrite)
+        f.close()
+        return uname, True
+
+
+@bot.command()
+async def olink(ctx, player: str):
+    await playerdb(ctx.author.id, "write", player)
+    embed = discord.Embed(title="osu! Account Linked!",
+                          description="Your Discord is now linked to: " + player)
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+async def oprofile(ctx, player: str = None, mode: str = "std"):
+    if player == None:
+        uname, status = await playerdb(ctx.author.id)
+    else:
+        uname = player
+        status = True
+    if not status:
+        embed = discord.Embed(title="Error!", description="No account found by that name.\nLink your osu! account first!")
+    else:
+        info, stat = await osugrab(uname)
+        if stat:
+            embed = discord.Embed(title=info["username"],
+                                  description="Current Ranking: #" + info["pp_rank"] + " (" + info["country"] + " #" + info["pp_country_rank"] + ")")
+            embed.add_field(name="Ranked Score", value=info["ranked_score"])
+            embed.add_field(name="Performance Points", value=info["pp_raw"] + "pp")
+        else:
+            embed = discord.Embed(title="Error!", description="No account found by the name " + uname + "!")
+    
+    await ctx.send(embed=embed)
 
 bot.run(token)
