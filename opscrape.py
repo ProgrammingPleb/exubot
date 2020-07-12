@@ -25,7 +25,7 @@ async def main(opin=""):
               "Beagle", "Cardigan", "Melantha", "Plume", "Vanilla", "Fang", "12F", "Durin", "Rangers", "Noir Corne",
               "Yato", "Castle-3", "Lancet-2"]
 
-    if opin != "":
+    if opin != None:
         opname = difflib.get_close_matches(opin, oplist, 1, 0.5)
     else:
         opname = [random.choice(oplist)]
