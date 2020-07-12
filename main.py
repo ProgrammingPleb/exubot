@@ -1,21 +1,32 @@
+# Python Modules Go Here
 import discord
 from discord.ext import commands, tasks
+import random
+import asyncio
+import json
+import urllib.parse
+from datetime import datetime
+import time
+
+# Local Modules Go Here
 from opscrape import main as opgrab
 from servertime import main as rscheck
 from gachacalc import msgsend as hhcalc
 from skinscrape import main as getskins
 from osuscrape import main as osugrab
-import random
-import asyncio
-import json
+from animescrape import main as animgrab
+from itunesscrape import main as itunes
+
 
 f = open("token.txt")
 token = f.read()
 f.close()
 
+
 f = open("bottype.txt")
 bottype = f.read()
 f.close()
+
 
 if bottype.strip("\n") == "release":
     print("Running Release Code....")
@@ -199,6 +210,36 @@ async def help(ctx):
                     await umsg.delete()
                     return
         elif page == 5:
+            embed.add_field(name="Media Commands",
+                            value="**anime <Show Name>**\n"
+                                  "Gives info about the anime given.\n\n"
+                                  "**song <Track Name>**\n"
+                                  "Gives info about the song given.")
+            hmsg = await ctx.send(embed=embed)
+
+            await hmsg.add_reaction("⬅")
+            await hmsg.add_reaction("➡")
+            await hmsg.add_reaction("🗑️")
+
+            try:
+                reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
+            except asyncio.TimeoutError:
+                await hmsg.remove_reaction("⬅", hmsg.author)
+                await hmsg.remove_reaction("➡", hmsg.author)
+                await hmsg.remove_reaction("🗑️", hmsg.author)
+                return
+            else:
+                if str(reaction.emoji) == "⬅":
+                    await hmsg.delete()
+                    page -= 1
+                elif str(reaction.emoji) == "➡":
+                    await hmsg.delete()
+                    page += 1
+                if str(reaction.emoji) == "🗑️":
+                    await hmsg.delete()
+                    await umsg.delete()
+                    return
+        elif page == 6:
             embed.add_field(name="Misc. Commands",
                             value="**rng [Initial Range] <Final Range>**\n"
                                   "Gives a random number based on the range.")
@@ -226,7 +267,7 @@ async def help(ctx):
                     await hmsg.delete()
                     await umsg.delete()
                     return
-        elif page == 6:
+        elif page == 7:
             embed.add_field(name="Moderation (WIP)",
                             value="**mute <User> [Reason]**\n"
                                   "Mutes a user in the server\n\n"
@@ -297,12 +338,6 @@ async def certhh(ctx):
 
 
 @bot.command()
-async def ccrisk(ctx):
-    await ctx.send("https://cdn.discordapp.com/attachments/586588958885150721/708704147591004220/FB_IMG_1589016478287"
-                   ".jpg")
-
-
-@bot.command()
 async def test(ctx):
     umsg = ctx.message
     message = await ctx.send("**Thisisaline**,\nThisislinetwo")
@@ -325,7 +360,7 @@ async def test(ctx):
 
 
 @bot.command()
-async def op(ctx, *, arg):
+async def op(ctx, *, arg: str = None):
     umsg = ctx.message
     opname, opimg, opinfo, opstat = await opgrab(arg)
     embed = discord.Embed(title=opname)
@@ -347,73 +382,23 @@ async def op(ctx, *, arg):
         embed.add_field(name="DEF", value="???")
     else:
         embed.add_field(name="DEF", value=opstat[2].getText())
-    embed.add_field(name="Actions", value="🌎 to get the link to operator's info\n"
-                                          "👕 to get the operator's skins\n"
-                                          "🗑️ to remove this message", inline=False)
+    if arg == None:
+        msgopt = "🌎 to get the link to operator's info\n" \
+                 "👕 to get the operator's skins\n" \
+                 "🎲 to re-roll for another operator\n" \
+                 "🗑️ to remove this message"
+    else:
+        msgopt = "🌎 to get the link to operator's info\n" \
+                 "👕 to get the operator's skins\n" \
+                 "🗑️ to remove this message"
+    embed.add_field(name="Actions", value=msgopt, inline=False)
     print(type(opinfo[1].getText()))
     result = await ctx.send(embed=embed)
 
     await result.add_reaction("🌎")
     await result.add_reaction("👕")
-    await result.add_reaction("🗑️")
-
-    def check(reaction, user):
-        return user == umsg.author and (str(reaction.emoji) == "🌎" or "👕" or "🗑️")
-
-    while True:
-        try:
-            reaction, user = await bot.wait_for('reaction_add', timeout=30.0, check=check)
-        except asyncio.TimeoutError:
-            await result.remove_reaction("🌎", result.author)
-            await result.remove_reaction("👕", result.author)
-            await result.remove_reaction("🗑️", result.author)
-            return
-        else:
-            if str(reaction.emoji) == "🌎":
-                await umsg.author.send("This is the link for: " + opname + ".\n" + opstat[3])
-                await result.remove_reaction("🌎", umsg.author)
-            elif str(reaction.emoji) == "👕":
-                await result.delete()
-                await skins(ctx, arg=opname)
-                return
-            elif str(reaction.emoji) == "🗑️":
-                await umsg.delete()
-                await result.delete()
-                return
-
-
-@op.error
-async def op_error(ctx, error):
-    umsg = ctx.message
-    opname, opimg, opinfo, opstat = await opgrab()
-    embed = discord.Embed(title=opname)
-    if not (opimg == "???"):
-        embed.set_image(url=opimg)
-    embed.set_footer(text="Exusiai", icon_url=iconlink)
-    embed.add_field(name="Operator Description", value=opinfo[1].getText(), inline=False)
-    embed.add_field(name="Operator Quote", value=opinfo[2].getText(), inline=False)
-    embed.add_field(name="Operator Traits", value=opinfo[0].getText(), inline=False)
-    if opstat[0].getText().strip(" ") == "":
-        embed.add_field(name="HP", value="???")
-    else:
-        embed.add_field(name="HP", value=opstat[0].getText())
-    if opstat[1].getText().strip(" ") == "":
-        embed.add_field(name="ATK", value="???")
-    else:
-        embed.add_field(name="ATK", value=opstat[1].getText())
-    if opstat[2].getText().strip(" ") == "":
-        embed.add_field(name="DEF", value="???")
-    else:
-        embed.add_field(name="DEF", value=opstat[2].getText())
-    embed.add_field(name="Actions", value="🌎 to get the link to operator's info\n"
-                                          "👕 to get the operator's skins\n"
-                                          "🎲 to re-roll for another operator\n"
-                                          "🗑️ to remove this message", inline=False)
-    result = await ctx.send(embed=embed)
-
-    await result.add_reaction("🌎")
-    await result.add_reaction("👕")
-    await result.add_reaction("🎲")
+    if arg == None:
+        await result.add_reaction("🎲")
     await result.add_reaction("🗑️")
 
     def check(reaction, user):
@@ -436,9 +421,9 @@ async def op_error(ctx, error):
                 await result.delete()
                 await skins(ctx, arg=opname)
                 return
-            elif str(reaction.emoji) == "🎲":
+            elif str(reaction.emoji) == "🎲" and arg == None:
                 await result.delete()
-                await op_error(ctx, error)
+                await op(ctx)
                 return
             elif str(reaction.emoji) == "🗑️":
                 await umsg.delete()
@@ -683,7 +668,7 @@ async def unban(ctx, player: str, *, reason: str = None):
 
 
 @bot.command()
-async def rng(ctx, fnum: int, lnum: int = None):
+async def rng(ctx, fnum: int = 100, lnum: int = None):
     if lnum == None:
         lnum = fnum
         fnum = 0
@@ -691,12 +676,92 @@ async def rng(ctx, fnum: int, lnum: int = None):
     await ctx.send("You got: " + str(value))
 
 
+# Media Commands Start Here
+@bot.command()
+async def anime(ctx, *, showname: str):
+    message = ctx.message
+    animdat = await animgrab(showname)
+    animdat = animdat[0]
+
+    if animdat["airing"]:
+        showstat = "Currently Airing"
+    else:
+        showstat = "Ended"
+
+    embed = discord.Embed(title=animdat["title"])
+    embed.add_field(name="Show Status", value=showstat, inline=False)
+    embed.add_field(name="Synopsis", value=animdat["synopsis"], inline=False)
+    embed.add_field(name="Show Type", value=animdat["type"])
+    embed.add_field(name="Episodes", value=animdat["episodes"])
+    embed.add_field(name="MAL Score", value=animdat["score"])
+    embed.set_thumbnail(url=animdat["image_url"])
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
+    result = await ctx.send(embed=embed)
+
+    def check(reaction, user):
+        return user == message.author and str(reaction.emoji) == "🗑️"
+
+    await result.add_reaction("🗑️")
+
+    try:
+        reaction, user = await bot.wait_for('reaction_add', timeout=30.0, check=check)
+    except asyncio.TimeoutError:
+        await result.remove_reaction("🗑️", result.author)
+    else:
+        await result.delete()
+        await message.delete()
+
+
+@anime.error
+async def anime_error(ctx, error):
+    embed = discord.Embed(title="Error!", description="No anime title was given!",
+                          color=discord.Colour.red())
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
+
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+async def song(ctx, *, name: str = None):
+    umsg = ctx.message.id
+    if name == None:
+        embed = discord.Embed(title="Error!", description="No anime title was given!",
+                          color=discord.Colour.red())
+    else:
+        data, status = await itunes(name)
+        results = data["results"]
+        first = results[0]
+
+        if first["trackExplicitness"] == "notExplicit":
+            explicit = "Not Explicit"
+        else:
+            explicit = "Explicit"
+
+        tracktime = datetime.fromtimestamp(int(first["trackTimeMillis"])/1000.0)
+        trackdur = tracktime - datetime.fromtimestamp(0)
+        trackhour = time.strftime('%H', time.gmtime(int(trackdur.total_seconds())))
+
+        if int(trackhour) > 0:
+            trackstamp = time.strftime('%H:%M:%S', time.gmtime(int(trackdur.total_seconds())))
+        else:
+            trackstamp = time.strftime('%M:%S', time.gmtime(int(trackdur.total_seconds())))
+
+        embed = discord.Embed(title=first["trackName"], description="by " + first["artistName"])
+        embed.add_field(name="Album", value=first["collectionName"], inline=False)
+        embed.add_field(name="Explicit Status", value=explicit)
+        embed.add_field(name="Genre", value=first["primaryGenreName"])
+        embed.add_field(name="Track Duration", value=str(trackstamp))
+        embed.set_thumbnail(url=first["artworkUrl100"])
+
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
+    await ctx.send(embed=embed)
+
+
 # Osu Commands Start Here
 async def playerdb(player: int, mode: str = "read", uname: str = None):
     f = open("osuplayer.json")
     filedata = f.read()
     f.close()
-    print(filedata)
     data = json.loads(filedata)
 
     if mode == "read":
@@ -721,6 +786,7 @@ async def olink(ctx, player: str):
     await playerdb(ctx.author.id, "write", player)
     embed = discord.Embed(title="osu! Account Linked!",
                           description="Your Discord is now linked to: " + player)
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
     await ctx.send(embed=embed)
 
 
@@ -729,20 +795,20 @@ async def oprofile(ctx, player: str = None, mode: str = "std"):
     if player == None:
         uname, status = await playerdb(ctx.author.id)
     else:
-        uname = player
-        status = True
+        uname = player            
     if not status:
-        embed = discord.Embed(title="Error!", description="No account found by that name.\nLink your osu! account first!")
+        uname = ctx.author.name
+    info, stat = await osugrab(uname)
+    if stat:
+        embed = discord.Embed(title=info["username"],
+                                description="Current Ranking: #" + info["pp_rank"] \
+                                + " (" + info["country"] + " #" + info["pp_country_rank"] + ")")
+        embed.add_field(name="Ranked Score", value=info["ranked_score"])
+        embed.add_field(name="Performance Points", value=info["pp_raw"] + "pp")
     else:
-        info, stat = await osugrab(uname)
-        if stat:
-            embed = discord.Embed(title=info["username"],
-                                  description="Current Ranking: #" + info["pp_rank"] + " (" + info["country"] + " #" + info["pp_country_rank"] + ")")
-            embed.add_field(name="Ranked Score", value=info["ranked_score"])
-            embed.add_field(name="Performance Points", value=info["pp_raw"] + "pp")
-        else:
-            embed = discord.Embed(title="Error!", description="No account found by the name " + uname + "!")
-    
+        embed = discord.Embed(title="Error!", description="No account found by the name " + uname + "!")
+
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
     await ctx.send(embed=embed)
 
 bot.run(token)
