@@ -7,6 +7,7 @@ import json
 import urllib.parse
 from datetime import datetime
 import time
+import aiohttp
 
 # Local Modules Go Here
 from opscrape import main as opgrab
@@ -15,7 +16,7 @@ from gachacalc import msgsend as hhcalc
 from skinscrape import main as getskins
 from osuscrape import main as osugrab
 from animescrape import main as animgrab
-from itunesscrape import main as itunes
+from itunesscrape import main as itunes, lyrics
 
 
 f = open("token.txt")
@@ -31,24 +32,56 @@ f.close()
 if bottype.strip("\n") == "release":
     print("Running Release Code....")
     iconlink = "https://img.ezz.moe/0622/17-19-26.png"
-    prefix = "e!"
 elif bottype.strip("\n") == "testing":
     print("Running Development Code....")
     iconlink = "https://img.ezz.moe/0622/16-15-14.jpg"
-    prefix = "t!"
-bot = commands.Bot(command_prefix=commands.when_mentioned_or(prefix))
+
+async def bot_prefixes(bot, message):
+    bot_id = bot.user.id
+    bot_mentions = [f'<@!{bot_id}> ', f'<@{bot_id}> ']
+    guild = message.guild
+
+    if bottype.strip("\n") == "release":
+        defaultpf = ['e!']
+    else:
+        defaultpf = ['t!']
+
+    with open("prefixes.json") as f:
+        allpf = json.loads(f.read())
+    
+    if guild:
+        if bottype.strip("\n") == "testing":
+            try:
+                custpf = allpf[str(guild.id)]
+            except KeyError:
+                return bot_mentions + defaultpf
+            else:
+                return bot_mentions + [custpf]
+    else:
+        return bot_mentions + defaultpf
+
+bot = commands.Bot(command_prefix=bot_prefixes)
 bot.remove_command('help')
 
 
 @bot.event
 async def on_ready():
     print(f'Exusiai is Online! Client name: {bot.user}')
+    global devid
+    devid = bot.get_user(256009740239241216)
     if bottype.strip("\n") == "release":
-        await bot.change_presence(activity=discord.Game(name=prefix + "help | Exusiai"))
+        await bot.change_presence(activity=discord.Game(name="e!help | Exusiai"))
         channel = bot.get_channel(721292304739991552)
         ResetTime(channel=channel)
     else:
-        await bot.change_presence(activity=discord.Game(name=prefix + "help | Exusiai (Dev)"))
+        await bot.change_presence(activity=discord.Game(name="t!help | Exusiai (Dev)"))
+
+
+async def devreport(command, error):
+    embed = discord.Embed(title="Error Details")
+    embed.add_field(name="Command Used", value=command, inline=False)
+    embed.add_field(name="Message", value=error, inline=False)
+    await devid.send("An error has occured in the bot!", embed=embed)
 
 
 class ResetTime(commands.Cog):
@@ -81,6 +114,22 @@ async def help(ctx):
 
     def check(reaction, user):
         return user == umsg.author and (str(reaction.emoji) == "⬅" or "➡" or "🗑️")
+
+    with open("prefixes.json") as f:
+        allpf = json.loads(f.read())
+    if ctx.guild:
+        try:
+            prefix = allpf[str(ctx.guild.id)]
+        except KeyError:
+            if bottype.strip("\n") == "release":
+                prefix = "e!"
+            else:
+                prefix = "t!"
+    else:
+        if bottype.strip("\n") == "release":
+            prefix = "e!"
+        else:
+            prefix = "t!"
 
     while True:
         embed = discord.Embed(title="Exusiai Commands")
@@ -302,6 +351,22 @@ async def help(ctx):
 
 
 @bot.command()
+@commands.guild_only()
+@commands.is_owner()
+async def prefix(ctx, newpf):
+    with open("prefixes.json") as f:
+        allpf = json.loads(f.read())
+    with open("prefixes.json", "w") as f:
+        allpf[str(ctx.guild.id)] = newpf
+        json.dump(allpf, f)
+    
+    embed = discord.Embed(title="Prefix Changed!", description="Any commands in the server will now use **" \
+                                                               + newpf + "** from now on.")
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
+    await ctx.send(embed=embed)
+
+
+@bot.command()
 async def materials(ctx):
     await ctx.send("__**Simple EN Farming Table**__ (By Cecaniah Corabelle#8846) :\n"
                    "Link : https://imgur.com/dSS1lIB\n\n"
@@ -311,11 +376,66 @@ async def materials(ctx):
                    "https://docs.google.com/spreadsheets/d/12Jwxr5mJBq73z378Bs-C0e6UcPLp-3UmeuSqAH6XmyQ)")
 
 
+async def delmsg(ctx, umsg, message):
+    def check(reaction, user):
+        return user == umsg.author and str(reaction.emoji) == "🗑️"
+
+    await message.add_reaction("🗑️")
+
+    try:
+        reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
+    except asyncio.TimeoutError:
+        await umsg.delete()
+        await message.delete()
+    else:
+        await umsg.delete()
+        await message.delete()
+
+
 @bot.command()
 async def banner(ctx):
-    await ctx.send("The next Standard HeadHunting Banner has been announced featuring higher pull-rates for Siege & "
-                   "Saria; which will run from - June 12, 2020, 4:00(UTC-7) to June 26, 2020, 3:59(UTC-7)\n\n"
-                   "https://imgur.com/a/NWH3SV6")
+    async with aiohttp.ClientSession() as session:
+        async with session.get("https://api.ezz.moe/arknights?q=banner") as r:
+            bannerdata = await r.json()
+    embed = discord.Embed(title=bannerdata["title"], description=bannerdata["data"])
+    embed.set_image(url=bannerdata["url"])
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
+    await ctx.send(embed=embed)
+
+
+async def timese(start, end):
+    start = datetime.strptime(start, "%Y-%m-%d %H:%M:%S")
+    end = datetime.strptime(end, "%Y-%m-%d %H:%M:%S")
+    if start < datetime.now():
+        if end < datetime.now():
+            status = "Ended"
+        else:
+            status = "Ongoing"
+    else:
+        status = "Not Started"
+    return status
+
+
+@bot.command()
+async def maintenance(ctx):
+    async with aiohttp.ClientSession() as session:
+        async with session.get("https://api.ezz.moe/arknights?q=maintenance") as r:
+            mtdata = await r.json()
+    status = await timese(mtdata["start"], mtdata["end"])
+    embed = discord.Embed(title="Maintenance", description=mtdata["data"])
+    embed.add_field(name="Status", value=status)
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+async def event(ctx):
+    async with aiohttp.ClientSession() as session:
+        async with session.get("https://api.ezz.moe/arknights?q=event") as r:
+            edata = await r.json()
+    status = await timese(edata["start"], edata["end"])
+    embed = discord.Embed(title="Maintenance", description=edata["data"])
+    embed.add_field(name="Status", value=status)
+    await ctx.send(embed=embed)
 
 
 @bot.command()
@@ -344,19 +464,7 @@ async def test(ctx):
     print(type(message))
     print(message)
 
-    def check(reaction, user):
-        return user == umsg.author and str(reaction.emoji) == "🗑️"
-
-    await message.add_reaction("🗑️")
-
-    try:
-        reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
-    except asyncio.TimeoutError:
-        await umsg.delete()
-        await message.delete()
-    else:
-        await umsg.delete()
-        await message.delete()
+    await delmsg(ctx, umsg, message)
 
 
 @bot.command()
@@ -723,9 +831,9 @@ async def anime_error(ctx, error):
 
 @bot.command()
 async def song(ctx, *, name: str = None):
-    umsg = ctx.message.id
+    umsg = ctx.message
     if name == None:
-        embed = discord.Embed(title="Error!", description="No anime title was given!",
+        embed = discord.Embed(title="Error!", description="No song title was given!",
                           color=discord.Colour.red())
     else:
         data, status = await itunes(name)
@@ -754,6 +862,70 @@ async def song(ctx, *, name: str = None):
         embed.set_thumbnail(url=first["artworkUrl100"])
 
     embed.set_footer(text="Exusiai", icon_url=iconlink)
+    result = await ctx.send(embed=embed)
+
+    def check(reaction, user):
+        return user == umsg.author and (str(reaction.emoji) == "📄" or "🗑️")
+
+    await result.add_reaction("📄")
+    await result.add_reaction("🗑️")
+
+    try:
+        reaction, user = await bot.wait_for('reaction_add', timeout=30.0, check=check)
+    except asyncio.TimeoutError:
+        await result.remove_reaction("📄", result.author)
+        await result.remove_reaction("🗑️", result.author)
+    else:
+        if str(reaction.emoji) == "📄":
+            await result.delete()
+            await lyric(ctx, name)
+        else:
+            await result.delete()
+            await umsg.delete()
+
+
+@song.error
+async def song_error(ctx, error):
+    embed = discord.Embed(title="Error!", description="An error occured in the command!\n"
+                                                      "This has been reported to the developer.",
+                          color=discord.Colour.red())
+    if isinstance(error, IndexError):
+        cause = "No songs by given name"
+    else:
+        cause = "Unknown possible causes"
+    embed.add_field(name="Possible Causes", value=cause)
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
+    await devreport("song", error)
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+async def lyric(context, *, name: str = None):
+    umsg = context.message
+    data, status = await itunes(name)
+    results = data["results"]
+    first = results[0]
+    async with context.typing():
+        songlyric = await lyrics(name)
+
+    embed = discord.Embed(title=first["trackName"], description="by " + first["artistName"])
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
+    await context.send(embed=embed)
+    await context.send(songlyric)
+
+
+@lyric.error
+async def lyric_error(ctx, error):
+    embed = discord.Embed(title="Error!", description="An error occured in the command!\n"
+                                                      "This has been reported to the developer.",
+                          color=discord.Colour.red())
+    if isinstance(error, IndexError):
+        cause = "No lyrics by given name"
+    else:
+        cause = "Unknown possible causes"
+    embed.add_field(name="Possible Causes", value=cause)
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
+    await devreport("lyric", error)
     await ctx.send(embed=embed)
 
 

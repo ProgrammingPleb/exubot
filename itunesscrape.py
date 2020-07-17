@@ -4,6 +4,7 @@ import aiohttp
 import json
 from datetime import datetime
 import time
+import lyricsgenius
 
 async def main(name: str = None, media: str = "music"):
     api = "https://itunes.apple.com/search?"
@@ -26,6 +27,16 @@ async def main(name: str = None, media: str = "music"):
                     return None, False
 
 
+async def lyrics(name: str = None):
+    with open("geniustoken.txt") as f:
+        token = f.read()
+    
+    genius = lyricsgenius.Genius(token)
+    genius.verbose = False
+    song = genius.search_song(name)
+    return song.lyrics
+
+
 async def test():
     data, status = await main("run joji")
     results = data["results"]
@@ -45,6 +56,7 @@ async def test():
     trackhour = time.strftime('%H', time.gmtime(int(trackdur.total_seconds())))
 
     print(trackhour)
+    print(await lyrics("run joji"))
 
 
 if __name__ == "__main__":
