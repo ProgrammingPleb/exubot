@@ -8,6 +8,7 @@ import urllib.parse
 from datetime import datetime
 import time
 import aiohttp
+import pytz
 
 # Local Modules Go Here
 from opscrape import main as opgrab
@@ -50,13 +51,12 @@ async def bot_prefixes(bot, message):
         allpf = json.loads(f.read())
     
     if guild:
-        if bottype.strip("\n") == "testing":
-            try:
-                custpf = allpf[str(guild.id)]
-            except KeyError:
-                return bot_mentions + defaultpf
-            else:
-                return bot_mentions + [custpf]
+        try:
+            custpf = allpf[str(guild.id)]
+        except KeyError:
+            return bot_mentions + defaultpf
+        else:
+            return bot_mentions + [custpf]
     else:
         return bot_mentions + defaultpf
 
@@ -66,7 +66,17 @@ bot.remove_command('help')
 
 @bot.event
 async def on_ready():
+    global botdb
+    with open("botdb.json") as f:
+        botdb = json.load(f)
     print(f'Exusiai is Online! Client name: {bot.user}')
+    all_guilds = ""
+    guild_count = 0
+    for guild in bot.guilds:
+        all_guilds = all_guilds + str(guild.id) + " - " + guild.name + "\n"
+        guild_count += 1
+    all_guilds = all_guilds.rstrip()
+    print(f'Guilds Joined ({str(guild_count)}):\n{all_guilds}')
     global devid
     devid = bot.get_user(256009740239241216)
     if bottype.strip("\n") == "release":
@@ -100,6 +110,42 @@ class ResetTime(commands.Cog):
         else:
             rtxt = rhour + "H " + rmin + "M"
         await channel.edit(name=rtxt)
+
+class MTCheck(commands.Cog):
+    # pylint: disable=maybe-no-member
+    def __init__(self):
+        self.mtupdate.start()
+
+    def cog_unload(self):
+        self.mtupdate.cancel()
+
+    @tasks.loop(minutes=1.0)
+    async def mtupdate(self):
+        async with aiohttp.ClientSession() as session:
+            async with session.get("https://api.ezz.moe/arknights?q=maintenance") as r:
+                data = await r.json()
+                start = data["start"]
+                end = data["end"]
+
+        with open("botdb.json") as f:
+            funcdata = json.loads(f.read())
+        
+        startf = pytz.timezone("America/Los_Angeles").localize(datetime.strptime(start, "%Y-%m-%d %H:%M:%S"))
+        timeh = pytz.timezone("Asia/Kuala_Lumpur").localize(datetime.now())
+
+        if funcdata["maintain"] == False:
+            if timeh >= startf:
+                funcdata["maintain"] = True
+                embed = discord.Embed(title="Maintenance Alert", description="The maintenance for the Arknights"
+                                                                             " EN Server has started.")
+                
+                for channel in funcdata["notify"]:
+                    smsg = bot.get_channel(channel)
+
+
+def stringrip(s: str, cut: str):
+    if cut and s.endswith(cut):
+        return s[:-len(cut)]
 
 
 @bot.command()
@@ -135,7 +181,7 @@ async def help(ctx):
         embed = discord.Embed(title="Exusiai Commands")
         embed.set_thumbnail(url=iconlink)
         embed.description = "Locked and loaded, ready for action!\nWhat's the objective today, Leader?\n\n" \
-                            "My prefix is " + prefix + "\nSymbols:\n" \
+                            "My prefix is **" + prefix + "**\nSymbols:\n" \
                                                        "[] = Optional (Can be left as empty)\n" \
                                                        "<> = Mandatory (Has to be filled in or else it won't work)"
         if page == 1:
@@ -168,7 +214,11 @@ async def help(ctx):
                                   "**certhh**\n"
                                   "Gives info about getting headhunting tickets using certificates\n\n"
                                   "**banner**\n"
-                                  "Gives info for the current headhunting banner (EN Server)\n\n"
+                                  "Gives info for the latest headhunting banner\n\n"
+                                  "**event**\n"
+                                  "Gives info for the latest event on the EN Server of Arknights"
+                                  "**maintenance**\n"
+                                  "Gives info for the latest maintenance schedule\n\n"
                                   "**materials**\n"
                                   "Gives info for farming certain materials (Story levels)",
                             inline=False)
@@ -229,7 +279,7 @@ async def help(ctx):
                     await umsg.delete()
                     return
         elif page == 4:
-            embed.add_field(name="osu! Commands",
+            embed.add_field(name="Other Game Commands",
                             value="**olink <Username>**\n"
                                   "Links your Discord username to your osu! username.\n\n"
                                   "**oprofile [Username]**\n"
@@ -291,7 +341,9 @@ async def help(ctx):
         elif page == 6:
             embed.add_field(name="Misc. Commands",
                             value="**rng [Initial Range] <Final Range>**\n"
-                                  "Gives a random number based on the range.")
+                                  "Gives a random number based on the range.\n\n"
+                                  "**prefix** <New Prefix>\n"
+                                  "Sets a new prefix for the bot in the server.")
             hmsg = await ctx.send(embed=embed)
 
             await hmsg.add_reaction("⬅")
@@ -400,7 +452,8 @@ async def banner(ctx):
     embed = discord.Embed(title=bannerdata["title"], description=bannerdata["data"])
     embed.set_image(url=bannerdata["url"])
     embed.set_footer(text="Exusiai", icon_url=iconlink)
-    await ctx.send(embed=embed)
+    result = await ctx.send(embed=embed)
+    await delmsg(ctx, ctx.message, result)
 
 
 async def timese(start, end):
@@ -424,7 +477,9 @@ async def maintenance(ctx):
     status = await timese(mtdata["start"], mtdata["end"])
     embed = discord.Embed(title="Maintenance", description=mtdata["data"])
     embed.add_field(name="Status", value=status)
-    await ctx.send(embed=embed)
+    embed.set_image(url=mtdata["url"])
+    result = await ctx.send(embed=embed)
+    await delmsg(ctx, ctx.message, result)
 
 
 @bot.command()
@@ -433,9 +488,11 @@ async def event(ctx):
         async with session.get("https://api.ezz.moe/arknights?q=event") as r:
             edata = await r.json()
     status = await timese(edata["start"], edata["end"])
-    embed = discord.Embed(title="Maintenance", description=edata["data"])
+    embed = discord.Embed(title="Event", description=edata["data"])
     embed.add_field(name="Status", value=status)
-    await ctx.send(embed=embed)
+    embed.set_image(url=edata["url"])
+    result = await ctx.send(embed=embed)
+    await delmsg(ctx, ctx.message, result)
 
 
 @bot.command()
@@ -467,71 +524,220 @@ async def test(ctx):
     await delmsg(ctx, umsg, message)
 
 
-@bot.command()
-async def op(ctx, *, arg: str = None):
-    umsg = ctx.message
-    opname, opimg, opinfo, opstat = await opgrab(arg)
-    embed = discord.Embed(title=opname)
-    if not (opimg == "???"):
-        embed.set_image(url=opimg)
-    embed.set_footer(text="Exusiai", icon_url=iconlink)
-    embed.add_field(name="Operator Description", value=opinfo[1].getText(), inline=False)
-    embed.add_field(name="Operator Quote", value=opinfo[2].getText(), inline=False)
-    embed.add_field(name="Operator Traits", value=opinfo[0].getText(), inline=False)
-    if opstat[0].getText().strip(" ") == "":
-        embed.add_field(name="HP", value="???")
-    else:
-        embed.add_field(name="HP", value=opstat[0].getText())
-    if opstat[1].getText().strip(" ") == "":
-        embed.add_field(name="ATK", value="???")
-    else:
-        embed.add_field(name="ATK", value=opstat[1].getText())
-    if opstat[2].getText().strip(" ") == "":
-        embed.add_field(name="DEF", value="???")
-    else:
-        embed.add_field(name="DEF", value=opstat[2].getText())
-    if arg == None:
-        msgopt = "🌎 to get the link to operator's info\n" \
+async def opprofile(opstat: dict, woargs: bool):
+    opprof = opstat["profile"]
+    optags = ""
+    for tag in opprof["tags"]:
+        optags = optags + tag + ", "
+    optags = stringrip(optags, ", ")
+    embed = discord.Embed(title=opprof["name"], description=opprof["desc"])
+    embed.add_field(name="Profile", value=opprof["fulldesc"], inline=False)
+    embed.add_field(name="Quote", value=opprof["quote"], inline=False)
+    embed.add_field(name="Archetype", value=opprof["archetype"])
+    embed.add_field(name="Tags", value=optags)
+    if woargs:
+        msgopt = "📂 for full profile\n" \
+                 "📋 for operator statistics\n" \
                  "👕 to get the operator's skins\n" \
+                 "🌎 to get the web link for more info\n" \
                  "🎲 to re-roll for another operator\n" \
                  "🗑️ to remove this message"
     else:
-        msgopt = "🌎 to get the link to operator's info\n" \
+        msgopt = "📂 for full profile\n" \
+                 "📋 for operator statistics\n" \
                  "👕 to get the operator's skins\n" \
+                 "🌎 to get the web link for more info\n" \
                  "🗑️ to remove this message"
     embed.add_field(name="Actions", value=msgopt, inline=False)
-    print(type(opinfo[1].getText()))
-    result = await ctx.send(embed=embed)
+    if opprof["imgurl"] != "???":
+        embed.set_image(url=opprof["imgurl"])
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
+    
+    return embed
 
-    await result.add_reaction("🌎")
+
+async def opdetail(opstat: dict, woargs: bool):
+    opprof = opstat["profile"]
+    embed = discord.Embed(title=opprof["name"])
+
+    embed.add_field(name="Illustrator", value=opprof["artist"], inline=False)
+    embed.add_field(name="CV", value=opprof["cv"], inline=False)
+
+    embed.add_field(name="Gender", value=opprof["gender"], inline=False)
+    embed.add_field(name="Place of Birth", value=opprof["PoB"], inline=False)
+    embed.add_field(name="Birthday", value=opprof["bday"], inline=False)
+    embed.add_field(name="Race", value=opprof["race"], inline=False)
+    embed.add_field(name="Height", value=opprof["height"], inline=False)
+    embed.add_field(name="Combat Experience", value=opprof["cbex"], inline=False)
+
+    embed.add_field(name="Physical Strength", value=opprof["physstg"], inline=False)
+    embed.add_field(name="Mobility", value=opprof["mobile"], inline=False)
+    embed.add_field(name="Physiological Endurance", value=opprof["physend"], inline=False)
+    embed.add_field(name="Tactical Planning", value=opprof["tactic"], inline=False)
+    embed.add_field(name="Combat Skill", value=opprof["cbskill"], inline=False)
+    embed.add_field(name="Originium Adaptability", value=opprof["originium"], inline=False)
+
+    if woargs:
+        msgopt = "📂 to go back\n" \
+                 "📋 for operator statistics\n" \
+                 "👕 to get the operator's skins\n" \
+                 "🌎 to get the web link for more info" \
+                 "🎲 to re-roll for another operator\n" \
+                 "🗑️ to remove this message"
+    else:
+        msgopt = "📂 to go back\n" \
+                 "📋 for operator statistics\n" \
+                 "👕 to get the operator's skins\n" \
+                 "🌎 to get the web link for more info\n" \
+                 "🗑️ to remove this message"
+    embed.add_field(name="Actions", value=msgopt)
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
+
+    return embed
+    
+
+async def opstats(message, result: discord.Message, opstat: dict, woargs: bool):
+    opprof = opstat["profile"]
+    opdata = opstat["stats"]
+    first = True
+    i = 1
+    rank = 4
+    if not opdata["e2"]:
+        rank = 3
+    
+    while True:
+        await result.delete()
+
+        if i == 1:
+            oplevel = "Base Min Level"
+        elif i == 2:
+            oplevel = "Base Max Level"
+        elif i == 3:
+            oplevel = "Elite 1 Max Level"
+        elif i == 4:
+            oplevel = "Elite 2 Max Level"
+        
+        embed = discord.Embed(title=opprof["name"], description="Operator's Statistics")
+        embed.add_field(name="Statistics Level", value=oplevel, inline=False)
+        embed.add_field(name="HP", value=opdata["s" + str(i)]["HP"], inline=True)
+        embed.add_field(name="ATK", value=opdata["s" + str(i)]["ATK"], inline=True)
+        embed.add_field(name="DEF", value=opdata["s" + str(i)]["DEF"], inline=True)
+        embed.add_field(name="RES", value=opdata["s" + str(i)]["RES"], inline=True)
+        embed.add_field(name="RDP", value=opdata["s" + str(i)]["RDP"], inline=True)
+        embed.add_field(name="DP", value=opdata["s" + str(i)]["DP"], inline=True)
+        embed.add_field(name="Block", value=opdata["s" + str(i)]["Block"], inline=True)
+        embed.add_field(name="ASPD", value=opdata["s" + str(i)]["ASPD"], inline=True)
+
+        msgopt = "📂 to go back\n" \
+                 "🗑️ to remove this message"
+
+        embed.add_field(name="Actions", value=msgopt, inline=False)
+        embed.set_footer(text="Exusiai", icon_url=iconlink)
+        result = await message.channel.send(embed=embed)
+
+        if i > 1:
+            await result.add_reaction("⬅")
+        if i < rank:
+            await result.add_reaction("➡")
+        await result.add_reaction("📂")
+        await result.add_reaction("🗑️")
+
+        def check(reaction, user):
+            return user == message.author and (str(reaction.emoji) == "⬅" or "➡" or "📂" or "🗑️")
+        
+        try:
+            reaction, user = await bot.wait_for('reaction_add', timeout=30.0, check=check)
+        except asyncio.TimeoutError:
+            if i > 1:
+                await result.remove_reaction("⬅", result.author)
+            if i < rank:
+                await result.remove_reaction("➡", result.author)
+            await result.remove_reaction("📂", result.author)
+            await result.remove_reaction("🗑️", result.author)
+            return 0
+        else:
+            if str(reaction.emoji) == "⬅" and i > 1:
+                await result.remove_reaction("⬅", message.author)
+                i -= 1
+            elif str(reaction.emoji) == "➡" and i < rank:
+                await result.remove_reaction("➡", message.author)
+                i += 1
+            elif str(reaction.emoji) == "📂":
+                await result.delete()
+                return 1
+            elif str(reaction.emoji) == "🗑️":
+                await result.delete()
+                await message.delete()
+                return 0
+
+
+async def aioop(message, operator):
+    umsg = message
+    ppage = 1
+    async with message.channel.typing():
+        opstat = await opgrab(operator)
+        embed = await opprofile(opstat, operator == None)
+    result = await message.channel.send(embed=embed)
+    
+    def check(reaction, user):
+        return user == umsg.author and (str(reaction.emoji) == "📂" or "📋" or "👕" or "🌎" or "🎲" or "🗑️")
+    
+    await result.add_reaction("📂")
+    await result.add_reaction("📋")
     await result.add_reaction("👕")
-    if arg == None:
+    await result.add_reaction("🌎")
+    if operator == None:
         await result.add_reaction("🎲")
     await result.add_reaction("🗑️")
-
-    def check(reaction, user):
-        return user == umsg.author and (str(reaction.emoji) == "🌎" or "👕" or "🎲" or "🗑️")
 
     while True:
         try:
             reaction, user = await bot.wait_for('reaction_add', timeout=30.0, check=check)
         except asyncio.TimeoutError:
-            await result.remove_reaction("🌎", result.author)
+            await result.remove_reaction("📂", result.author)
+            await result.remove_reaction("📋", result.author)
             await result.remove_reaction("👕", result.author)
-            await result.remove_reaction("🎲", result.author)
+            await result.remove_reaction("🌎", result.author)
+            if operator == None:
+                await result.remove_reaction("🎲", result.author)
             await result.remove_reaction("🗑️", result.author)
             return
         else:
-            if str(reaction.emoji) == "🌎":
-                await umsg.author.send("This is the link for: " + opname + ".\n" + opstat[3])
-                await result.remove_reaction("🌎", umsg.author)
+            if str(reaction.emoji) == "📂":
+                await result.remove_reaction("📂", umsg.author)
+                if ppage == 1:
+                    embed = await opdetail(opstat, operator == None)
+                    ppage = 2
+                else:
+                    embed = await opprofile(opstat, operator == None)
+                    ppage = 1
+                await result.edit(embed=embed)
+            elif str(reaction.emoji) == "📋":
+                await result.remove_reaction("📋", umsg.author)
+                status = await opstats(message, result, opstat, operator == None)
+                if status == 1:
+                    embed = await opprofile(opstat, operator == None)
+                    result = await message.channel.send(embed=embed)
+
+                    await result.add_reaction("📂")
+                    await result.add_reaction("📋")
+                    await result.add_reaction("👕")
+                    await result.add_reaction("🌎")
+                    if operator == None:
+                        await result.add_reaction("🎲")
+                    await result.add_reaction("🗑️")
+                elif status == 0:
+                    return
             elif str(reaction.emoji) == "👕":
                 await result.delete()
-                await skins(ctx, arg=opname)
+                await aioskins(message, opstat["profile"]["name"])
                 return
-            elif str(reaction.emoji) == "🎲" and arg == None:
+            elif str(reaction.emoji) == "🌎":
+                await umsg.author.send("This is the link for: " + opstat["profile"]["name"] + ".\n" + opstat["profile"]["url"])
+                await result.remove_reaction("🌎", umsg.author)
+            elif str(reaction.emoji) == "🎲" and operator == None:
                 await result.delete()
-                await op(ctx)
+                await aioop(message, operator)
                 return
             elif str(reaction.emoji) == "🗑️":
                 await umsg.delete()
@@ -539,10 +745,9 @@ async def op(ctx, *, arg: str = None):
                 return
 
 
-@bot.command()
-async def skins(ctx, *, arg):
-    umsg = ctx.message
-    opname, imglist = await getskins(arg)
+async def aioskins(message, operator):
+    umsg = message
+    opname, imglist = await getskins(operator)
     skincount = len(imglist) - 1
     scroll = 0
 
@@ -555,7 +760,7 @@ async def skins(ctx, *, arg):
 
     while True:
         embed.set_image(url=imglist[scroll])
-        hmsg = await ctx.send(embed=embed)
+        hmsg = await message.channel.send(embed=embed)
 
         if scroll == 0:
             await hmsg.add_reaction("➡")
@@ -597,6 +802,38 @@ async def skins(ctx, *, arg):
 
 
 @bot.command()
+async def op(ctx, *, arg: str = None):
+    await aioop(ctx.message, arg)
+    
+
+@op.error
+async def op_error(ctx, error):
+    embed = discord.Embed(title="Error!", description="An error occured in the command!\n"
+                                                      "This has been reported to the developer.",
+                          color=discord.Colour.red())
+    if isinstance(error, ValueError):
+        cause = "Unexpected value from operator stats table"
+    else:
+        cause = "Unknown possible causes"
+    embed.add_field(name="Possible Causes", value=cause)
+    embed.set_footer(text="Exusiai", icon_url=iconlink)
+    await devreport("op", error)
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+async def skins(ctx, *, arg):
+    await aioskins(ctx.message, arg)
+
+
+@bot.command()
+async def support(ctx):
+    user = ctx.author
+    await user.send("https://discord.gg/bfbhJvn")
+    await ctx.send("The support link is now in your DMs!")
+
+
+@bot.command()
 async def waifu(ctx):
     awaifu = ["Amiya", "Angelina", "Ansel ", "Beagle", "Beehunter", "Blue Poison", "Cardigan", "Catapult", "Cliffheart",
               "Croissant", "Cuora", "DeepColor", "Dobermann", "Durin", "EarthSpirit", "Estelle", "Exusiai",
@@ -608,10 +845,10 @@ async def waifu(ctx):
               "Projekt Red ", "Provence", "Ptilopsis", "Rope", "Saria", "Savage", "Scavenger", "Shaw", "Shining",
               "Shirayuki", "Siege", "Silence", "Skadi", "Skyfire", "Sora", "Specter", "Texas", "Vanilla", "Vigna",
               "Vulcan", "Warfarin", "Yato", "Zima"]
-    opname, opimg, opinfo, opstat = await opgrab(random.choice(awaifu))
+    opstat = await opgrab(random.choice(awaifu))
     embed = discord.Embed(title="Waifu Headhunt")
-    embed.description = "You got: **" + opname + "**!"
-    embed.set_image(url=opimg)
+    embed.description = "You got: **" + opstat["profile"]["name"] + "**!"
+    embed.set_image(url=opstat["profile"]["imgurl"])
     embed.set_footer(text="Exusiai", icon_url=iconlink)
     await ctx.send(embed=embed)
 
@@ -620,10 +857,10 @@ async def waifu(ctx):
 async def husbando(ctx):
     ahusbando = ["12F", "Bison", "Castle-3", "Courier", "Greyy", "Hellagur", "Matterhorn", "Midnight", "Noir Corne",
                  "Ranger", "Steward", "SliverAsh", "Spot"]
-    opname, opimg, opinfo, opstat = await opgrab(random.choice(ahusbando))
+    opstat = await opgrab(random.choice(ahusbando))
     embed = discord.Embed(title="Husbando Headhunt")
-    embed.description = "You got: **" + opname + "**!"
-    embed.set_image(url=opimg)
+    embed.description = "You got: **" + opstat["profile"]["name"] + "**!"
+    embed.set_image(url=opstat["profile"]["imgurl"])
     embed.set_footer(text="Exusiai", icon_url=iconlink)
     await ctx.send(embed=embed)
 
@@ -773,6 +1010,28 @@ async def unban(ctx, player: str, *, reason: str = None):
     embed.add_field(name="Reason", value=reason, inline=False)
     embed.set_footer(text="Exusiai", icon_url=iconlink)
     await ctx.send(embed=embed)
+
+
+@bot.command()
+@commands.is_owner()
+async def config(ctx, item: str = None, state: str = True):
+    if item == None:
+        allitems = ""
+        for item in botdb["config"]:
+            allitems = allitems + item + ", "
+        allitems = stringrip(allitems, ", ")
+
+        await ctx.send("The configs for this bot are: " + allitems)
+    else:
+        if state.lower() == "true":
+            state = True
+        else:
+            state = False
+        botdb["config"][item] = state
+        with open("botdb.json", "w") as f:
+            json.dump(botdb, f, indent=4)
+        
+        await ctx.send(item + " is now set to: " + str(state))
 
 
 @bot.command()
@@ -982,5 +1241,16 @@ async def oprofile(ctx, player: str = None, mode: str = "std"):
 
     embed.set_footer(text="Exusiai", icon_url=iconlink)
     await ctx.send(embed=embed)
+
+
+@bot.event
+async def on_message(message):
+    if message.guild:
+        if ("https://gamepress.gg/arknights/operator/" in message.content) and botdb["config"]["opparse"]:
+            opname = message.content.strip("https://gamepress.gg/arknights/operator").replace("-", " ")
+            await aioop(message, opname)
+
+        await bot.process_commands(message)
+
 
 bot.run(token)
