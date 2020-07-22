@@ -1,9 +1,8 @@
-<img src="https://img.ezz.moe/0721/17-37-55.png" width="65%" height="65%">  
+<img src="https://img.ezz.moe/0722/13-28-41.png" width="65%" height="65%">  
 
-# Exusiai ![Bot Status](https://top.gg/api/widget/status/721022151490011156.svg) ![Bot Owner](https://top.gg/api/widget/owner/721022151490011156.svg)
-## An Arknights Centered Discord Bot  
+![Bot Status](https://top.gg/api/widget/status/721022151490011156.svg) ![Bot Owner](https://top.gg/api/widget/owner/721022151490011156.svg)  
 Ever wondered to have a bot pump out Arknights info for your server?  
-Don't fret! This bot is gonna fit right in instantly.
+Don't fret! This bot is the right bot for you!
 
 ## Features
 - Operator Profile with Skins Support
