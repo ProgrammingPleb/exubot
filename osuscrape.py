@@ -14,11 +14,14 @@ async def main(username: str, type: str = "user", mode: str = "std", rank: int =
     
     if type == "user":
         async with aiohttp.ClientSession() as session:
-            async with session.get("https://osu.ppy.sh/api/get_user?k=" + token.strip("\n") + "&u=" + username + "&type=string") as r:
-                if r.status == 200:
-                    return (await r.json())[0], True
-                else:
-                    return None, False
+            try:
+                async with session.get("https://osu.ppy.sh/api/get_user?k=" + token.strip("\n") + "&u=" + username + "&type=string") as r:
+                    if r.status == 200:
+                        return (await r.json())[0], True
+                    else:
+                        return None, False
+            except IndexError:
+                return None, False
     elif type == "best":
         async with aiohttp.ClientSession() as session:
             async with session.get("https://osu.ppy.sh/api/get_user_best?k=" + token.strip("\n") + "&u=" + username + "&type=string") as r:
@@ -40,9 +43,8 @@ async def main(username: str, type: str = "user", mode: str = "std", rank: int =
 
 
 async def test():
-    data, status = (await main(username="EzzPlays", type="user"))
+    data, status = (await main(username="NobodyHasThisUsernameISwear", type="user"))
     print(data)
-    print(data[0]['username'])
 
 
 if __name__ == "__main__":

@@ -5,10 +5,33 @@ import difflib
 import random
 import asyncio
 import re
+import urllib
 
 
-async def main(opin=""):
+class NoOperator(Exception):
+    def __init__(self, opname):
+        self.opname = opname
+        self.message = "No operators exist with that name!"
+        super().__init__(self.message)
+    
+    def __str__(self):
+        return f'{self.opname} -> {self.message}'
+
+
+class CNOperator(Exception):
+    def __init__(self, opname):
+        self.opname = opname
+        self.message = "This operator still has not enough info!"
+        super().__init__(self.message)
+    
+    def __str__(self):
+        return f'{self.opname} -> {self.message}'
+
+
+async def main(opin = None):
     # Take input and find nearest matching operator
+    # Deprecated due to maintainability issues
+    """
     oplist = ["Rosa (Poca)", "Leonhardt", "Absinthe", "Podenco", "Tsukinogi", "Asbestos", "Weedy", "W", "Elysium",
               "Thermal-EX", "Phantom", "Shamare", "Sideroca", "Cutter", "Conviction", "Bagpipe", "Sesa", "Bibeak",
               "Utage", "Purestream", "Ceobe", "Leizi", "Nian", "Aak", "Hung", "Snowsant", "Blaze", "GreyThroat",
@@ -30,10 +53,48 @@ async def main(opin=""):
         opname = difflib.get_close_matches(opin, oplist, 1, 0.5)
     else:
         opname = [random.choice(oplist)]
+    """
+
+    # Search the Arknights Fandom Wiki for nearest operator match
+    # Yes, I'm relying on other services to do the work for me.
+    if opin != None:
+        searchdata = opin
+        oparticle = None
+        opfound = False
+        opquery = urllib.parse.quote(opin, safe="")
+        async with aiohttp.ClientSession() as session:
+            async with session.get("https://mrfz.fandom.com/wiki/Special:Search?query=" + opquery) as r:
+                soup = BeautifulSoup(await r.text(), "lxml")
+                for br in soup.find_all("br"):
+                    br.replace_with("\n")
+                qresult = soup.find("ul", {"class": "Results"})
+                if qresult is None:
+                    raise NoOperator(opin)
+                for article in qresult.find_all("article"):
+                    if "/File" in article.getText() and not opfound:
+                        opname = article("a")[0].getText().replace("/File", "")
+                        opfound = True
+                    if "/Stats" in article.getText() and not opfound:
+                        opname = article("a")[0].getText().replace("/Stats", "")
+                        opfound = True
+                    elif "(CN" in article.getText() and not opfound:
+                        opname = article("a")[0].getText()
+                        raise CNOperator(opname)
+                if not opfound:
+                    raise NoOperator(opin)
+    else:
+        opstar = random.randrange(4,7)
+        async with aiohttp.ClientSession() as session:
+            async with session.get("https://mrfz.fandom.com/wiki/Special:RandomInCategory/" + str(opstar) + "-star") as r:
+                soup = BeautifulSoup(await r.text(), "lxml")
+                opname = soup.find("h1", {"class": "page-header__title"}).getText()
+                searchdata = opname
+
 
     # Get the right form for the URL
-    opnurla = opname[0].lower().strip("'").replace(" ", "-")
-    opnurlf = opname[0].strip("'").replace(" ", "_")
+    opnurla = opname.lower().replace("'", "").replace(" ", "-")
+    opnurlf = opname.replace("'", "%27").replace(" ", "_")
+
 
     # Deprecated due to GamePress changes
     """
@@ -60,6 +121,7 @@ async def main(opin=""):
                 opdef = ""
             opstat = [ophp, opatk, opdef, "https://gamepress.gg/arknights/operator/" + opnurl]
     """
+
 
     # Define Base Data
     opstat = {
@@ -98,9 +160,10 @@ async def main(opin=""):
             }, "s4": {
                 "HP": 0, "ATK": 0, "DEF": 0, "RES": 0, "RDP": 0, "DP": 0, "Block": 0, "ASPD": 0.0
             }
-        }}
+        }, "search": searchdata
+    }
 
-    opstat["profile"]["name"] = opname[0]
+    opstat["profile"]["name"] = opname
     opstat["profile"]["url"] = "https://gamepress.gg/arknights/operator/" + opnurla
 
     # GamePress will still be used, only for certain static data
@@ -137,7 +200,10 @@ async def main(opin=""):
             opstat["profile"]["fulldesc"] = soup.find("div", {"class": "profile-description"}).getText()
             for tag in soup.find_all("div", {"class": "tag-cell"})[0].find_all("a"):
                 opstat["profile"]["tags"].append(tag.getText().strip("\n"))
-            opstat["profile"]["archetype"] = soup.find_all("div", {"class": "tag-cell"})[1].find("a").getText().strip("\n")
+            try:
+                opstat["profile"]["archetype"] = soup.find_all("div", {"class": "tag-cell"})[1].find("a").getText().strip("\n")
+            except IndexError:
+                opstat["profile"]["archetype"] = "N/A"
 
 
     # We're now grabbing the data from the Arknights Fandom Wiki, since
@@ -200,17 +266,28 @@ async def main(opin=""):
     # with some artist names i.e. artist for Blaze which has an @ sign     
     async with aiohttp.ClientSession() as session:
         async with session.get("https://mrfz.fandom.com/wiki/" + opnurlf + "/File") as r:
-            soup = BeautifulSoup(await r.text(), "lxml")
-            opstat["profile"]["artist"] = soup.find("div", {"data-source": "illustrator"}).find("div").getText()
-            opstat["profile"]["cv"] = soup.find("div", {"data-source": "cv"}).find("div").getText()
-            
+            if r.status == 200:
+                soup = BeautifulSoup(await r.text(), "lxml")
+                opstat["profile"]["artist"] = soup.find("div", {"data-source": "illustrator"}).find("div").getText()
+                opstat["profile"]["cv"] = soup.find("div", {"data-source": "cv"}).find("div").getText()
+            else:
+                async with session.get("https://gamepress.gg/arknights/operator/" + opnurla) as rfall:
+                    soupfall = BeautifulSoup(await rfall.text(), "lxml")
+                    i = 0
+                    profdiv = soupfall.find("div", {"class": "profile-info-table"})
+                    proftables = profdiv("table")
+                    proft0 = ["artist", "cv"]
+                    for item in proftables[0]("td"):
+                        opstat["profile"][proft0[i]] = (item.getText().strip("\n").strip(" "))
+                        i += 1
 
     return opstat
 
 
 async def test():
-    received = await main("blaze")
+    received = await main("poca")
     print(received)
+    # await main("blaze")
 
 
 if __name__ == "__main__":
