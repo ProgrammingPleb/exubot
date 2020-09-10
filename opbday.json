@@ -1,0 +1,98 @@
+{
+    "1": {
+        "2": ["Haze"],
+        "3": ["Matoimaru"],
+        "5": ["Shaw"],
+        "15": ["Gitano", "Orchid"],
+        "18": ["Blue Poison"],
+        "20": ["Gravel", "Hoshiguma"],
+        "30": ["Perfumer"],
+        "31": ["Ansel"]
+    },
+    "2": {
+        "13": ["Platinum", "Pramanix"],
+        "14": ["Estelle"],
+        "15": ["SilverAsh"],
+        "16": ["Vanilla"]
+    },
+    "3": {
+        "2": ["Beagle"],
+        "3": ["12F", "Jessica"],
+        "5": ["Courier"],
+        "7": ["Skadi"],
+        "19": ["Melantha"]
+    },
+    "4": {
+        "4": ["Rope"],
+        "5": ["Earthspirit"],
+        "15": ["Indra"],
+        "23": ["Nearl", "Saria"],
+        "30": ["Vulcan"]
+    },
+    "5": {
+        "1": ["Frostleaf", "Gavial", "Meteor"],
+        "4": ["Nightingale"],
+        "5": ["Myrrh"],
+        "12": ["Lancet-2"],
+        "14": ["Angelina", "Yato"],
+        "18": ["Liskarm", "Silence"],
+        "19": ["Matterhorn"],
+        "20": ["Midnight"],
+        "27": ["Dobermann"],
+        "30": ["Adnachiel"]
+    },
+    "6": {
+        "1": ["Nightmare", "Skyfire", "Texas"],
+        "12": ["Deepcolor"],
+        "21": ["Hibiscus"],
+        "22": ["Lava"],
+        "27": ["Warfarin"],
+        "30": ["Savage"]
+    },
+    "7": {
+        "6": ["Ch'en"],
+        "10": ["Seige"],
+        "20": ["Shirayuki"],
+        "22": ["Ifrit", "Rangers"],
+        "27": ["Specter"],
+        "29": ["Zima"]
+    },
+    "8": {
+        "2": ["Cardigan"],
+        "8": ["Catapult"],
+        "10": ["FEater"],
+        "19": ["Mousse"],
+        "22": ["Scavenger"],
+        "25": ["Projekt Red"],
+        "30": ["Meteorite", "Noir Corne"]
+    },
+    "9": {
+        "12": ["Sora"],
+        "22": ["Istina"],
+        "29": ["Croissant"]
+    },
+    "10": {
+        "1": ["Shining"],
+        "2": ["Beehunter", "Gummy"],
+        "6": ["Ptilopsis"],
+        "18": ["Eyjafhalla"],
+        "28": ["Plume"],
+        "30": ["Franka"]
+    },
+    "11": {
+        "11": ["Lappland"],
+        "20": ["Mayer"],
+        "22": ["Kroos"],
+        "28": ["Cliffheart"],
+        "30": ["Provence"]
+    },
+    "12": {
+        "1": ["Grani"],
+        "2": ["Fang"],
+        "10": ["Castle-3"],
+        "12": ["Vigna"],
+        "15": ["Durin"],
+        "23": ["Amiya"],
+        "24": ["Exusiai", "Steward"]
+    }
+}
