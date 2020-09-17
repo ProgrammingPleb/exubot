@@ -56,7 +56,7 @@ async def mmquery(name=""):
                 br.replace_with("\n")       # Change any HTML Line Breaks to Newlines (Discord Friendly)
             qresults = soup.find("ul", {"class": "Results"})        # Get the results returned by the site.
             for result in qresults.find_all("li", {"class": "result"}):     # Then, we find the individual result based on the line above.
-                if "樂曲名" in result.find("article").getText():        # Checking if there is "Song Name" in the description of the result.
+                if ("樂曲名" in result.find("article").getText()) or ("追加日期" in result.find("article") .getText()):        # Checking if there is "Song Name" in the description of the result.
                     if "歌曲清單" not in result.find("article").getText():      # Some results are categories, which also have "Song Name" in the description, so we exclude those.
                         rlist["names"].append(result.find("a").getText())       # Get the song name...
                         rlist["links"].append(result.find("a")["href"])     # and it's respective fandom link to it.
@@ -159,9 +159,10 @@ async def mminfo(link=""):
     # blocking as Discord Bots are asynchronous, thus we cannot have any blocking
     # calls made in our bot.
     i = 0
+    dxdata = "???"
     for catcheck in category:
         if catcheck in data["category"]:
-            scraper = rpyc.connect("localhost", 3333)      # Connect to the scraper service
+            scraper = rpyc.connect("136.243.191.38", 3333)      # Connect to the scraper service
             agrab = rpyc.async_(scraper.root.dxinfo)        # Wrap the function in an async version of it
             scrape = agrab("https://maimai.sega.com/song/" + catlinks[i] + "/")     # Have it check for the song in the site
 
@@ -186,8 +187,8 @@ async def mminfo(link=""):
         for song in mmresults:
             title = song.find("h2", {"class": "titleText"})     # Get the song name...
             if data["jpname"] in title.getText() and song.find_all("li") != []:     # and see if it matches what we have.
-                found = False
-                data["diffplatform"] = "DX"     # We confirm that it's on DX...
+                found = True
+                data["diffplatform"] = "DX/DX+"     # We confirm that it's on DX...
                 data["intl"] = True     # and we confirm that it's on the International Version.
                 for diff in diffabb:        # Then we grab all the difficulties of that song (including Re:Master)
                     diffclass = "lev_" + diff
@@ -203,10 +204,10 @@ async def mminfo(link=""):
                     br.replace_with("\n")
                 data["diffplatform"] = soup.find_all("table")[2].getText().split(" ")[0].strip()        # This is where the difficulties are at
                 for item in soup.find_all("table")[3].find_all("tr"):
-                    print(item)
                     for color in tablecolors:
                         search = item.find("td", {"style": "background-color: rgb(" + color + ")"})     # Then we search for the table cell next to the diffculty number
                         if search != [] and search != None:
+                            print(search)
                             if item.find_all("td")[1].getText().strip() != "":
                                 data["diffs"].append(item.find_all("td")[1].getText().strip())      # Then, we just collect it to be returned later on.
 

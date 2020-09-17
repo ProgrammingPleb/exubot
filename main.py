@@ -20,6 +20,7 @@ from skinscrape import main as getskins
 from osuscrape import main as osugrab
 from animescrape import main as animgrab
 from itunesscrape import main as itunes, lyrics
+from maimai import mminfo, mmquery
 
 # Custom Errors Here
 
@@ -113,7 +114,10 @@ async def on_ready():
     all_guilds = ""
     guild_count = 0
     for guild in bot.guilds:
-        all_guilds = all_guilds + str(guild.id) + " - " + guild.name + "\n"
+        if guild.name == None:
+            all_guilds = all_guilds + str(guild.id) + " - ???\n"
+        else:
+            all_guilds = all_guilds + str(guild.id) + " - " + guild.name + "\n"
         guild_count += 1
     all_guilds = all_guilds.rstrip()
     print(f'Guilds Joined ({str(guild_count)}):\n{all_guilds}')
@@ -305,10 +309,12 @@ async def help(ctx):
                                         "Gives a random waifu from Arknights!\n\n"
                                         "**husbando**\n"
                                         "Gives a random husbando from Arknights!"],
-            "3": ["Other Game Commands",    "**olink <Username>**\n"
+            "3": ["Other Game Commands",    "**maimai <Song Name>\n**"
+                                            "Searches for a Maimai song and returns the info for it!\n\n"
+                                            "**olink <Username>**\n"
                                             "Links your Discord username to your osu! username.\n\n"
                                             "**oprofile [Username]**\n"
-                                            "Gives info about your player's (or another's) osu! stats"],
+                                            "Gives info about your player's (or another's) osu! stats. **UNFINISHED**"],
             "4": ["Media Commands", "**anime <Show Name>**\n"
                                     "Gives info about the anime given.\n\n"
                                     "**song <Track Name>**\n"
@@ -1253,6 +1259,94 @@ async def lyric_error(ctx, error):
     embed.set_footer(text="Exusiai", icon_url=iconlink)
     await devreport("lyric", error)
     await ctx.send(embed=embed)
+
+
+# Maimai Command Starts Here
+@bot.command()
+async def maimai(ctx, *, song: str = ""):
+    umsg = ctx.message
+    if song == "":
+        embed = discord.Embed(title="Error!", description="No song title was given!",
+                          color=discord.Colour.red())
+        await ctx.send(embed=embed)
+    else:
+        async with ctx.channel.typing():
+            songlist = await mmquery(song)
+            i = 1
+            lsong = ""
+            for name in songlist["names"]:
+                lsong += str(i) + ". " + name + "\n"
+                i += 1
+            schoice = discord.Embed(title="Search Results", description="Choose a song below.")
+            schoice.add_field(name="Results", value=lsong.strip())
+            schoice.add_field(name="Other Actions", value="Enter 'cancel' to cancel the command.")
+            schoice.set_footer(text="Exusiai", icon_url=iconlink)
+
+        mainmsg = await ctx.send(embed=schoice)
+
+        def msg_check(m):
+            return m.channel == ctx.channel and m.author.id == umsg.author.id
+
+        while True:
+            try:
+                msg = await bot.wait_for('message', timeout=30.0, check=msg_check)
+            except asyncio.TimeoutError:
+                toembed = discord.Embed(title="Timeout!", description="No song title was given within 30 seconds.",
+                                        color=discord.Colour.red())
+                await mainmsg.edit(embed=toembed)
+                await asyncio.sleep(3)
+                return
+            else:
+                try:
+                    choicenum = int(msg.content)
+                except TypeError:
+                    if choicenum == "cancel":
+                        await msg.delete()
+                        await mainmsg.delete()
+                        await ctx.message.delete()
+                        return
+                    else:
+                        schoice = discord.Embed(title="Search Results", description="Not a valid choice!\nChoose a song below.", color=discord.Colour.red())
+                        schoice.add_field(name="Results", value=lsong.strip())
+                        schoice.add_field(name="Other Actions", value="Enter 'cancel' to cancel the command.")
+                        schoice.set_footer(text="Exusiai", icon_url=iconlink)
+                        await msg.delete()
+                        await mainmsg.edit(embed=schoice)
+                else:
+                    if choicenum <= len(songlist["names"]):
+                        async with ctx.channel.typing():
+                            mmdata = await mminfo(songlist["links"][choicenum - 1])
+                            result = discord.Embed(title=mmdata["jpname"])
+                            if mmdata["enname"] != mmdata["jpname"]:
+                                result.add_field(name="Name (Japanese)", value=mmdata["jpname"])
+                                result.add_field(name="Name (English)", value=mmdata["enname"])
+                            else:
+                                result.add_field(name="Name", value=mmdata["jpname"])
+                            if mmdata["enartist"] != mmdata["jpartist"]:
+                                result.add_field(name="Artist (Japanese)", value=mmdata["jpartist"])
+                                result.add_field(name="Artist (English)", value=mmdata["enartist"])
+                            else:
+                                result.add_field(name="Artist", value=mmdata["jpartist"])
+                            result.add_field(name="Category", value=mmdata["category"])
+                            result.add_field(name="First Release", value=mmdata["release"])
+                            result.add_field(name="Release Date", value=mmdata["date"])
+                            result.add_field(name="BPM", value=mmdata["bpm"])
+                            if mmdata["intl"]:
+                                result.add_field(name="Intl. Version Availability", value="Yes", inline=False)
+                            elif not mmdata["intl"]:
+                                result.add_field(name="Intl. Version Availability", value="No", inline=False)
+                            if mmdata["diffs"] != []:
+                                diffstr = ""
+                                for diff in mmdata["diffs"]:
+                                    diffstr += diff + ", "
+                                result.add_field(name="Difficulty Levels for: " + mmdata["diffplatform"], value=diffstr.strip(", "), inline=False)
+                            result.set_thumbnail(url=mmdata["image"])
+                            result.set_footer(text="Exusiai", icon_url=iconlink)
+                            await msg.delete()
+
+                        await mainmsg.edit(embed=result)
+                        return
+
 
 
 # Osu Commands Start Here

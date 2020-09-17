@@ -1,1 +1,15 @@
-{"mtnotify": {"maintain": true, "notify": []}, "config": {"opparse": true}}
+{
+    "mtnotify": {
+        "maintain": true,
+        "notify": []
+    },
+    "config": {
+        "opparse": true,
+        "637518305070153728": {
+            "opparse": true
+        },
+        "738293097154347008": {
+            "opparse": true
+        }
+    }
+}
