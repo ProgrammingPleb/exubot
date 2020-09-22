@@ -1,16 +1,13 @@
 import rpyc
 from selenium import webdriver
-from selenium.webdriver.chrome.webdriver import Options
+from selenium.webdriver.firefox.webdriver import Options
 
 chopt = Options()
-chopt.add_argument('--headless')
-chopt.add_argument('--no-sandbox')
-chopt.add_argument('--disable-dev-shm-usage')
-chopt.add_argument('--disable-gpu')
+chopt.headless = True
 
-driver = webdriver.Chrome(options=chopt)
+driver = webdriver.Firefox(options=chopt)
 driver.get("https://example.com/")
-print("Started Chrome.")
+print("Started Firefox.")
 
 
 class Runner(rpyc.Service):
