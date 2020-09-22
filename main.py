@@ -127,11 +127,11 @@ async def on_ready():
         await bot.change_presence(activity=discord.Game(name="e!help | Exusiai"))
         # channel = bot.get_channel(721292304739991552)
         # ResetTime(channel=channel)
-        bot.add_cog(OPbday())
+        # bot.add_cog(OPbday())         # Deprecating due to possible rewrite
         bot.add_cog(DBLupdate(bot))
     else:
         await bot.change_presence(activity=discord.Game(name="t!help | Exusiai (Dev)"))
-        bot.add_cog(OPbday())
+        # bot.add_cog(OPbday())         # Deprecating due to possible rewrite
     await aiolog("The timezone is currently: " + _pinfo["tz"])
 
 
@@ -191,6 +191,7 @@ class MTCheck(commands.Cog):
                     smsg = bot.get_channel(channel)
 
 
+"""
 class OPbday(commands.Cog):
     # pylint: disable=maybe-no-member
     def __init__(self):
@@ -240,9 +241,11 @@ class OPbday(commands.Cog):
                 with open("botdb.json", "w") as f:
                     json.dump(botdb, f, indent=4)
                     log("Recorded as brand new day", True)
+"""
 
 
 class DBLupdate(commands.Cog):
+    # pylint: disable=no-method-argument
     def __init__(self, bot):
         self.bot = bot
         with open("topgg.txt") as f:
@@ -1232,7 +1235,7 @@ async def song_error(ctx, error):
 
 
 @bot.command()
-async def lyric(context, *, name: str = None):
+async def lyric(context, name: str = None):
     umsg = context.message
     data, status = await itunes(name)
     results = data["results"]

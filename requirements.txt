@@ -20,6 +20,8 @@ pylint==2.5.3
 pytz==2020.1
 ratelimiter==1.2.0.post0
 requests==2.24.0
+rpyc==4.1.
+selenium==3.141.0
 simplejson==3.17.2
 six==1.15.0
 soupsieve==2.0.1
