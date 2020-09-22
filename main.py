@@ -21,6 +21,7 @@ from osuscrape import main as osugrab
 from animescrape import main as animgrab
 from itunesscrape import main as itunes, lyrics
 from maimai import mminfo, mmquery
+import cogs.music
 
 # Custom Errors Here
 
@@ -132,7 +133,7 @@ async def on_ready():
     else:
         await bot.change_presence(activity=discord.Game(name="t!help | Exusiai (Dev)"))
         # bot.add_cog(OPbday())         # Deprecating due to possible rewrite
-        bot.add_cog('cogs.music')
+        bot.add_cog(cogs.music)
     await aiolog("The timezone is currently: " + _pinfo["tz"])
 
 
