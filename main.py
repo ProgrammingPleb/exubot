@@ -133,7 +133,7 @@ async def on_ready():
     else:
         await bot.change_presence(activity=discord.Game(name="t!help | Exusiai (Dev)"))
         # bot.add_cog(OPbday())         # Deprecating due to possible rewrite
-        bot.add_cog(cogs.music.Music())
+        bot.add_cog(cogs.music.Music(bot))
     await aiolog("The timezone is currently: " + _pinfo["tz"])
 
 
