@@ -12,7 +12,7 @@ idna==2.10
 isort==4.3.21
 jikanpy==4.2.2
 lazy-object-proxy==1.4.3
-lxml==4.5.2
+lxml==4.6.2
 lyricsgenius==1.8.6
 mccabe==0.6.1
 multidict==4.7.6
